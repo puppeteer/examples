@@ -3,17 +3,20 @@
  * License Apache-2.0
  */
 
-// Combine Puppeteer and Lighthouse to customize the network throttle settings
-// for a Lighthouse audit run. Chrome gets launched by Puppeteer (normally done
-// by LH) and custom network conditions are established through Puppeteer's
-// APIs. Lighthouse then audits the page with those settings.
-//
-// The flow is:
-// 1. Disable Lighthouse's default throttling settings.
-// 2. Launch Chrome using Puppeteer. Tell Lighthouse to reuse that chrome
-//    instance instead of launching it's own.
-// 3. Hand the url to Lighthouse for testing.
-// 4. Puppeteer observes the page opening, then sets up emulation.
+/**
+ * Custom network throttling for Lighthouse Testing using Puppeteer.
+ *
+ * Chrome gets launched by Puppeteer (normally done by LH) and custom network
+ * conditions are established through Puppeteer's APIs. Lighthouse then audits
+ * the page with those settings.
+ *
+ * The flow is:
+ * 1. Disable Lighthouse's default throttling settings.
+ * 2. Launch Chrome using Puppeteer. Tell Lighthouse to reuse that chrome
+ *    instance instead of launching it's own.
+ * 3. Hand the url to Lighthouse for testing.
+ * Puppeteer observes the page opening, then sets up emulation.
+ */
 
 const puppeteer = require('puppeteer');
 const lighthouse = require('lighthouse');
