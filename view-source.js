@@ -3,7 +3,7 @@
  * License Apache-2.0
  */
 
-// Curl a page and dump it's markup.
+// Curl a page and dump its markup.
 
 const puppeteer = require('puppeteer');
 
