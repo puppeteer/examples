@@ -4,10 +4,14 @@
   "author": "Eric Bidelman <ebidel@gmail.com>",
   "description": "Examples of using Puppeteer to do big things",
   "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/GoogleChromeLabs/puppeteer-examples/issues"
+  },
   "engines": {
     "node": ">=8"
   },
   "dependencies": {
+    "caniuse-db": "^1.0.30000813",
     "chalk": "^2.3.1",
     "chrome-har": "^0.2.3",
     "chrome-launcher": "^0.10.2",
