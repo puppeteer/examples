@@ -22,7 +22,7 @@
  * Run it:
  * node speech.js -t Hello there, my name is Jarvis.
  * node speech.js -t Read anything good lately?
- * CHROME_PATH=/path/to/chrome -t hi and bye!
+ * CHROME_PATH=/path/to/chrome node speech.js -t hi and bye!
  */
 
 const fs = require('fs');
