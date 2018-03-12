@@ -17,7 +17,7 @@
  */
 
 /**
- * Prints a non-exhasutive list of HTML/JS/CSS features a page is using which
+ * Prints a non-exhaustive list of HTML/JS/CSS features a page is using which
  * are not supported by the Google Search bot and "Render as Google"
  * (runs Chrome 41). See developers.google.com/search/docs/guides/rendering.
  */
@@ -143,6 +143,7 @@ function getPropertyMappings() {
 /**
  * Fetches HTML/JS feature id/names from chromestatus.com.
  * @param {!Browser} browser
+ * @return {!Object}
  */
 async function fetchFeatureToNameMapping(browser) {
   const page = await browser.newPage();
