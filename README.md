@@ -16,6 +16,9 @@ Examples for using [Puppeteer](https://developers.google.com/web/tools/puppeteer
 
 <img width="747" alt="screen shot 2018-03-07 at 12 50 32 pm" src="https://user-images.githubusercontent.com/238208/37125450-804ad8c0-2221-11e8-8c96-7c5af582778f.png">
 
+[speech.js](./speech.js)
+
+[![Speech demo is action](http://img.youtube.com/vi/v5ZXRgzR7Wc/0.jpg)](https://www.youtube.com/watch?v=v5ZXRgzR7Wc)
 
 ### License
 
