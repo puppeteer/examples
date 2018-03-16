@@ -43,8 +43,8 @@ const browserWSEndpoint = process.env.wsURL || null;
 
   if (!browserWSEndpoint) {
     const browser = await puppeteer.launch({
-      handleSIGINT: false,
-      headless: false
+      handleSIGINT: false, // so Chrome doesn't exit when we quit Node.
+      headless: false // to see what's happening
     });
 
     console.log('1. Quit this script (cmd/ctrl+C).');
