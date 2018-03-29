@@ -220,7 +220,7 @@ const usage = traceEvents.reduce((usage, e) => {
   return usage;
 }, {});
 
-// Unique events baed on feature proprety id.
+// Unique events based on feature property id.
 usage.FeatureFirstUsed = uniqueByProperty(usage.FeatureFirstUsed, 'id');
 usage.CSSFirstUsed = uniqueByProperty(usage.CSSFirstUsed, 'id');
 
