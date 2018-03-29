@@ -24,6 +24,7 @@
 
 const fs = require('fs');
 const puppeteer = require('puppeteer');
+const fetch = require('node-fetch');
 const chalk = require('chalk');
 const caniuseDB = require('caniuse-db/data.json').data;
 
@@ -128,42 +129,23 @@ function supportedByGoogleSearch(feature) {
 }
 
 /**
- * Injected into the page.
- * @return {!Object} key/val pairs of ids -> feature name
- */
-function getPropertyMappings() {
-  const timeline = document.querySelector('chromedash-feature-timeline');
-  return timeline.props.reduce((accum, property) => {
-    const [id, val] = property;
-    accum[id] = val;
-    return accum;
-  }, {});
-}
-
-/**
  * Fetches HTML/JS feature id/names from chromestatus.com.
  * @param {!Browser} browser
- * @return {!Object}
+ * @return {!Map<number, string>} key/val pairs of ids -> feature name
  */
-async function fetchFeatureToNameMapping(browser) {
-  const page = await browser.newPage();
-  await page.goto('https://www.chromestatus.com/metrics/feature/timeline/popularity');
-  const result = await page.evaluate(getPropertyMappings);
-  await page.close();
-  return result;
+async function fetchFeatureToNameMapping() {
+  const resp = await fetch('https://www.chromestatus.com/data/blink/features');
+  return new Map(await resp.json());
 }
 
 /**
  * Fetches CSS property id/names from chromestatus.com
  * @param {!Browser} browser
- * @return {!Object}
+ * @return {!Map<number, string>} key/val pairs of ids -> feature name
  */
 async function fetchCSSFeatureToNameMapping(browser) {
-  const page = await browser.newPage();
-  await page.goto('https://www.chromestatus.com/metrics/css/timeline/popularity');
-  const result = await page.evaluate(getPropertyMappings);
-  await page.close();
-  return result;
+  const resp = await fetch('https://www.chromestatus.com/data/blink/cssprops');
+  return new Map(await resp.json());
 }
 
 /**
@@ -221,9 +203,9 @@ const browser = await puppeteer.launch({
 });
 
 // Parallelize the separate page loads.
-const [featureIdToName, cssFeatureIdToName, traceEvents] = await Promise.all([
-  fetchFeatureToNameMapping(browser),
-  fetchCSSFeatureToNameMapping(browser),
+const [featureMap, cssFeatureMap, traceEvents] = await Promise.all([
+  fetchFeatureToNameMapping(),
+  fetchCSSFeatureToNameMapping(),
   collectFeatureTraceEvents(browser),
 ]);
 
@@ -232,9 +214,8 @@ const usage = traceEvents.reduce((usage, e) => {
     usage[e.name] = [];
   }
   const id = e.args.feature;
-  const isCSS = e.name === 'CSSFirstUsed';
-  const name = isCSS ? cssFeatureIdToName[id] : featureIdToName[id];
-  usage[e.name].push({id, name, ts: e.ts, css: isCSS});
+  const name = isCSS ? cssFeatureMap.get(id) : featureMap.get(id);
+  usage[e.name].push({id, name, ts: e.ts, css: e.name === 'CSSFirstUsed'});
 
   return usage;
 }, {});

@@ -11,15 +11,16 @@
     "node": ">=8"
   },
   "dependencies": {
-    "caniuse-db": "^1.0.30000813",
-    "chalk": "^2.3.1",
-    "chrome-har": "^0.2.3",
+    "caniuse-db": "^1.0.30000821",
+    "chalk": "^2.3.2",
+    "chrome-har": "^0.3.1",
     "chrome-launcher": "^0.10.2",
     "cli-table": "^0.3.1",
-    "lighthouse": "^2.9.1",
+    "lighthouse": "^2.9.4",
     "mime": "^1.4.0",
-    "puppeteer": "^1.1.1-next.1519675964105",
-    "request": "^2.83.0",
+    "node-fetch": "^2.1.2",
+    "puppeteer": "^1.2.0",
+    "request": "^2.85.0",
     "request-promise": "^4.2.2",
     "request-promise-native": "^1.0.5"
   }
