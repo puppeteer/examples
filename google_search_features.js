@@ -213,9 +213,10 @@ const usage = traceEvents.reduce((usage, e) => {
   if (!(e.name in usage)) {
     usage[e.name] = [];
   }
+  const isCSS = e.name === 'CSSFirstUsed';
   const id = e.args.feature;
   const name = isCSS ? cssFeatureMap.get(id) : featureMap.get(id);
-  usage[e.name].push({id, name, ts: e.ts, css: e.name === 'CSSFirstUsed'});
+  usage[e.name].push({id, name, ts: e.ts, css: isCSS});
 
   return usage;
 }, {});
