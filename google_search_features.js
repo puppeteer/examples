@@ -86,6 +86,7 @@ const BlinkFeatureNameToCaniuseName = {
   CSSPaintFunction: 'css-paint-api',
   WorkerStart: 'webworkers',
   ServiceWorkerControlledPage: 'serviceworkers',
+  PrepareModuleScript: 'es6-module',
   // CookieGet:
   // CookieSet
 };
@@ -103,6 +104,21 @@ function uniqueByProperty(items, propName) {
   return posts;
 }
 
+/**
+ * Sorts array of features by their name
+ * @param {!Object} a
+ * @param {!Object} b
+ */
+function sortByName(a, b) {
+  if (a.name < b.name) {
+    return -1;
+  }
+  if (a.name > b.name) {
+    return 1;
+  }
+  return 0;
+}
+
 function printHeader(usage) {
   console.log('');
   console.log(`${chalk.bold(chalk.yellow('CAREFUL'))}: using ${usage.FeatureFirstUsed.length} HTML/JS, ${usage.CSSFirstUsed.length} CSS features. Some features are ${chalk.underline('not')} supported by the Google Search crawler.`);
@@ -110,7 +126,7 @@ function printHeader(usage) {
   console.log('');
   console.log(chalk.dim('More info at https://developers.google.com/search/docs/guides/rendering.'));
   console.log('');
-  console.log('Results:');
+  console.log(`Features used which are not supported by Google Search`);
   console.log('');
 }
 
@@ -196,6 +212,18 @@ async function collectFeatureTraceEvents(browser) {
   return events;
 }
 
+/**
+ * @param {!Object} feature
+ */
+function printFeatureName(feature, url= null) {
+  const suffix = url ? `: ${url}` : '';
+  if (feature.css) {
+    console.log(chalk.grey('-'), `CSS \`${feature.name}\`${suffix}`);
+  } else {
+    console.log(chalk.grey('-'), `${feature.name}${suffix}`);
+  }
+}
+
 (async() => {
 
 const browser = await puppeteer.launch({
@@ -227,17 +255,20 @@ usage.CSSFirstUsed = uniqueByProperty(usage.CSSFirstUsed, 'id');
 
 printHeader(usage);
 
-for (const [id, feature] of Object.entries([...usage.FeatureFirstUsed, ...usage.CSSFirstUsed])) {
+const allFeaturesUsed = Object.entries([...usage.FeatureFirstUsed, ...usage.CSSFirstUsed].sort(sortByName));
+for (const [id, feature] of allFeaturesUsed) {
   const caniuseName = BlinkFeatureNameToCaniuseName[feature.name];
   const supported = supportedByGoogleSearch(caniuseName);
   if (caniuseName && !supported) {
     const url = chalk.magentaBright(`https://caniuse.com/#feat=${caniuseName}`);
-    if (feature.css) {
-      console.log(chalk.grey('-'), `CSS \`${feature.name}\`: ${url}`);
-    } else {
-      console.log(chalk.grey('-'), `${feature.name}: ${url}`);
-    }
+    printFeatureName(feature, url);
   }
+}
+console.log('');
+console.log('All features used on the page:');
+console.log('');
+for (const [id, feature] of allFeaturesUsed) {
+  printFeatureName(feature);
 }
 console.log('');
 
