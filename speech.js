@@ -60,7 +60,7 @@ const text = flagIdx === -1 ? DEFAULT_TXT : process.argv.slice(flagIdx + 1).join
 await page.evaluateOnNewDocument(text => window.TEXT2SPEECH = text, text);
 
 const html = fs.readFileSync('./html/speech_synth.html', {encoding: 'utf-8'});
-// Frafty way to cause a navigation so the evaluateOnNewDocument kicks in.
+// Cause a navigation so the evaluateOnNewDocument kicks in.
 await page.goto(`data:text/html,${html}`);
 
 const button = await page.$('button');
