@@ -16,11 +16,11 @@
  * @author ebidel@ (Eric Bidelman)
  */
 
- /**
-  * Shows how to use raw web sockets to send messages to the page using
-  * the DevTools protocol.
-  * See https://chromedevtools.github.io/devtools-protocol/
-  */
+/**
+* Shows how to use raw web sockets to send messages to the page using
+* the DevTools protocol.
+* See https://chromedevtools.github.io/devtools-protocol/
+*/
 
 const {URL} = require('url');
 const WebSocket = require('ws');
@@ -33,10 +33,12 @@ const url = process.env.URL || 'https://example.com';
 const browser = await puppeteer.launch();
 const page = await browser.newPage();
 
-// createCDPSession() is the easiest way to work with the raw DTP:
+// // 1. createCDPSession() is the easiest way to work with the raw DTP:
 // const client = await page.target().createCDPSession();
 // const version = await client.send('Browser.getVersion');
 // console.log(version);
+
+// 2.But you can also use raw websockets...
 
 // Pull page's ws:// debugging url.
 const wsUrl = new URL(browser.wsEndpoint());
@@ -50,7 +52,7 @@ const ws = new WebSocket(webSocketDebuggerUrl).on('open', () => {
   ws.send(JSON.stringify({
     id: 1,
     method: 'Runtime.evaluate',
-    params: {expression: 'document.title'}
+    params: {expression: 'document.title'} // return the page title.
   }));
 }).on('message', async data => {
   console.log('Title of page:', JSON.parse(data).result.result.value);
