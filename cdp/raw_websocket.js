@@ -17,10 +17,10 @@
  */
 
 /**
-* Shows how to use raw web sockets to send messages to the page using
-* the DevTools protocol.
-* See https://chromedevtools.github.io/devtools-protocol/
-*/
+ * Shows how to use raw web sockets to send messages to the page using
+ * the DevTools protocol.
+ * See https://chromedevtools.github.io/devtools-protocol/
+ */
 
 const {URL} = require('url');
 const WebSocket = require('ws');
