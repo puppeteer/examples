@@ -29,7 +29,6 @@ const chalk = require('chalk');
 const caniuseDB = require('caniuse-db/data.json').data;
 
 const url = process.env.URL || 'https://www.chromestatus.com/features';
-const outfile = 'trace.json';
 
 const GOOGLE_SEARCH_CHROME_VERSION = process.env.CHROME_VERSION || 41;
 
@@ -126,7 +125,7 @@ function printHeader(usage) {
   console.log('');
   console.log(chalk.dim('More info at https://developers.google.com/search/docs/guides/rendering.'));
   console.log('');
-  console.log(`Features used which are not supported by Google Search`);
+  console.log(`Features used which are not supported by Google Search:`);
   console.log('');
 }
 
@@ -175,7 +174,6 @@ async function collectFeatureTraceEvents(browser) {
   console.log(chalk.cyan(`Trace started.`));
 
   await page.tracing.start({
-    path: outfile,
     categories: [
       '-*',
       'disabled-by-default-devtools.timeline', // for TracingStartedInPage
@@ -186,11 +184,8 @@ async function collectFeatureTraceEvents(browser) {
   await page.goto(url, {waitUntil: 'networkidle2'});
   console.log(chalk.cyan(`Waiting for page to be idle...`));
   await page.waitFor(5000); // add a little more time in case other features are used.
-  await page.tracing.stop();
-
+  const trace = JSON.parse(await page.tracing.stop());
   console.log(chalk.cyan(`Trace complete.`));
-
-  const trace = JSON.parse(fs.readFileSync(outfile, {encoding: 'utf-8'}));
 
   // Filter out all trace events that aren't 1. blink feature usage
   // and 2. from the same process/thread id as our test page's main thread.
@@ -272,7 +267,6 @@ for (const [id, feature] of allFeaturesUsed) {
 }
 console.log('');
 
-fs.unlinkSync(outfile);
 await browser.close();
 
 })();
