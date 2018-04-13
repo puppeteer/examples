@@ -18,7 +18,7 @@
 
  /**
   * Hash (#) changes aren't considered navigations in Chrome. This makes it
-  * tricky to test aSPA that use hashes to change views.
+  * tricky to test a SPA that use hashes to change views.
   *
   * This script shows how to observe the view of a SPA changing in Puppeteer
   * by injecting code into the page that listens for `hashchange` events.
