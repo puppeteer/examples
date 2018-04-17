@@ -24,6 +24,11 @@ Output from some of the examples:
 
 [![Playing Puppeteer Pacman](https://user-images.githubusercontent.com/238208/38574488-c45df5a0-3cad-11e8-90fe-001afc2d4625.png)](https://youtu.be/5CihR6Z9sX8)
 
+### [element-to-pdf.js](./element-to-pdf.js)
+
+<img width="500" alt="elemen-to-pdf output example" src="https://user-images.githubusercontent.com/238208/38771535-bd7b6b44-3fd9-11e8-8b83-80f3131fcb80.png">
+
+
 ### License
 
 [Apache 2.0](./LICENSE) © 2018 Google Inc.
