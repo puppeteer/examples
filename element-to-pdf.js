@@ -58,6 +58,7 @@ await page.setContent(`
     <head>
       <style>
         html, body {
+          height: 100vh;
           margin: 0;
           display: flex;
           justify-content: center;
@@ -77,7 +78,6 @@ await page.setContent(`
   </html>
 `);
 
-await page.emulateMedia('screen'); // technically unnecessary
 await page.pdf({path: 'tweet.pdf', printBackground: true});
 
 await browser.close();
