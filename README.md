@@ -28,6 +28,12 @@ Output from some of the examples:
 
 <img width="500" alt="elemen-to-pdf output example" src="https://user-images.githubusercontent.com/238208/38771535-bd7b6b44-3fd9-11e8-8b83-80f3131fcb80.png">
 
+### [crawlsite.js](./crawlsite.js)
+
+Discover all the URLs on a site and visualize the subpages.
+
+<img width="500" alt="Crawl a site/SPA" src="https://user-images.githubusercontent.com/238208/38901761-5f387902-4252-11e8-9ce4-aab2661143f4.png">
+
 
 ### License
 
