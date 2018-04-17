@@ -28,7 +28,7 @@
  *   node element-to-pdf.js
  *   USERNAME=ChromiumDev node element-to-pdf.js
  *
- *   Make the PDF searchable by embedding the element as-is (instead of an image).
+ *   --searchable makes "find in page" work:
  *   node element-to-pdf.js --searchable
  *
  * Output:
