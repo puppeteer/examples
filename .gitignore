@@ -1,6 +1,7 @@
 *.png
 *.pdf
 output*
+tmp/
 user-data-dir/
 node_modules/
 *error.log
