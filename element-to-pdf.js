@@ -53,6 +53,7 @@ const overlay = await page.$('.tweet.permalink-tweet');
 const screenshot = await overlay.screenshot({path: 'tweet.png'});
 
 await page.setContent(`
+  <!DOCTYPE html>
   <html>
     <head>
       <style>
