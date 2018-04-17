@@ -28,12 +28,16 @@
  *   node element-to-pdf.js
  *   USERNAME=ChromiumDev node element-to-pdf.js
  *
+ *   Make the PDF searchable by embedding the element as-is (instead of an image).
+ *   node element-to-pdf.js --searchable
+ *
  * Output:
  *   tweet.png and tweet.pdf
  */
 const puppeteer = require('puppeteer');
 
 const username = process.env.USERNAME || 'ebidel';
+const searchable = process.argv.includes('--searchable');
 
 (async() => {
 
@@ -52,31 +56,44 @@ await page.waitForSelector('.tweet.permalink-tweet', {visible: true});
 const overlay = await page.$('.tweet.permalink-tweet');
 const screenshot = await overlay.screenshot({path: 'tweet.png'});
 
-await page.setContent(`
-  <!DOCTYPE html>
-  <html>
-    <head>
-      <style>
-        html, body {
-          height: 100vh;
-          margin: 0;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          background: #fafafa;
-        }
-        img {
-          max-width: 60%;
-          box-shadow: 3px 3px 6px #eee;
-          border-radius: 6px;
-        }
-      </style>
-    </head>
-    <body>
-      <img src="data:img/png;base64,${screenshot.toString('base64')}">
-    </body>
-  </html>
-`);
+if (searchable) {
+  await page.evaluate(tweet => {
+    const width = getComputedStyle(tweet).width;
+    tweet = tweet.cloneNode(true);
+    tweet.style.width = width;
+    document.body.innerHTML = `
+      <div style="display:flex;justify-content:center;align-items:center;height:100vh;">;
+        ${tweet.outerHTML}
+      </div>
+    `;
+  }, overlay);
+} else {
+  await page.setContent(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          html, body {
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #fafafa;
+          }
+          img {
+            max-width: 60%;
+            box-shadow: 3px 3px 6px #eee;
+            border-radius: 6px;
+          }
+        </style>
+      </head>
+      <body>
+        <img src="data:img/png;base64,${screenshot.toString('base64')}">
+      </body>
+    </html>
+  `);
+}
 
 await page.pdf({path: 'tweet.pdf', printBackground: true});
 
