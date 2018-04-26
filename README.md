@@ -50,6 +50,12 @@ Discover all the URLs on a site and visualize the subpages.
 
 <img width="500" alt="Crawl a site/SPA" src="https://user-images.githubusercontent.com/238208/38901761-5f387902-4252-11e8-9ce4-aab2661143f4.png">
 
+### [side-by-side-pageload.js](./side-by-side-pageload.js)
+
+Load 2 or more pages side-by-side to visually see the difference in page load. Optional desktop viewport and throttling settings.
+
+<img width="500" alt="Side by side page load" src="https://user-images.githubusercontent.com/238208/39337122-167cc91e-4970-11e8-955c-2e1beeeef6fe.png">
+
 ### License
 
 [Apache 2.0](./LICENSE) © 2018 Google Inc.
