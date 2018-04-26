@@ -155,7 +155,7 @@ const waitForPage = async pos => {
 };
 
 const stopTimes = await Promise.all(urls.map((url, i) => waitForPage(i)));
-stopTimes.forEach((stopTime, i) => console.log(`Page ${i} took ${stopTime - start} ms to reach network idel`));
+stopTimes.forEach((stopTime, i) => console.log(`Page ${i + 1} took ${stopTime - start} ms to reach network idle`));
 
 await sleep(TIMEOUT_AFTER_LOAD);
 
