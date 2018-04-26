@@ -25,6 +25,6 @@
     "request-promise": "^4.2.2",
     "request-promise-native": "^1.0.5",
     "sharp": "^0.20.1",
-    "ws": "^5.1.1"
+    "yargs": "^11.0.0"
   }
 }
