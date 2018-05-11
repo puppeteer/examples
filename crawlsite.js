@@ -26,6 +26,9 @@
   *   URL=https://yourspa.com node crawlsite.js
   *   URL=https://yourspa.com node crawlsite.js --screenshots
   *
+  *Start Server:
+  *   node app.js
+  *
   * Then open the visualizer in a browser:
   *   http://localhost:8080/html/d3tree.html
   *   http://localhost:8080/html/d3tree.html?url=../output/https___yourspa.com/crawl.json
