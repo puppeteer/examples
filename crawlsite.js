@@ -29,6 +29,10 @@
   * Then open the visualizer in a browser:
   *   http://localhost:8080/html/d3tree.html
   *   http://localhost:8080/html/d3tree.html?url=../output/https___yourspa.com/crawl.json
+  *
+  *Start Server:
+  *   node server.js
+  *
   */
 
 const fs = require('fs');
