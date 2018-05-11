@@ -11,7 +11,7 @@
     "node": ">=8"
   },
   "dependencies": {
-    "caniuse-db": "^1.0.30000828",
+    "caniuse-db": "^1.0.30000839",
     "chalk": "^2.3.2",
     "chrome-har": "^0.3.1",
     "chrome-launcher": "^0.10.2",
@@ -20,11 +20,12 @@
     "lighthouse": "^2.9.4",
     "mime": "^2.3.1",
     "node-fetch": "^2.1.2",
-    "puppeteer": "next",
+    "puppeteer": "^1.4.0",
     "request": "^2.85.0",
     "request-promise": "^4.2.2",
     "request-promise-native": "^1.0.5",
     "sharp": "^0.20.1",
+    "ws": "^5.1.1",
     "yargs": "^11.0.0"
   }
 }
