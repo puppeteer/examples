@@ -1,6 +1,7 @@
 *.png
 *.pdf
-output*
+output/*
+!output/.keep
 tmp/
 user-data-dir/
 node_modules/
