@@ -58,7 +58,7 @@ function mkdirSync(dirPath) {
   try {
     dirPath.split('/').reduce((parentPath, dirName) => {
       const currentPath = parentPath + dirName;
-      fs.mkdirSync(currentPath);
+      if (!fs.existsSync(currentPath)) fs.mkdirSync(currentPath);
       return currentPath + '/';
     }, '')
   } catch (err) {
