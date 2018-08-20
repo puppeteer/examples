@@ -18,6 +18,7 @@
     "cli-table": "^0.3.1",
     "del": "^3.0.0",
     "express": "^4.16.3",
+    "generic-pool": "^3.4.2",
     "lighthouse": "^2.9.4",
     "mime": "^2.3.1",
     "node-fetch": "^2.1.2",
