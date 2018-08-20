@@ -61,8 +61,7 @@ async function getContent(url) {
     const responseHackerNews = await getContent(HACKER_NEWS_SPA_URL);
     console.log(responseHackerNews);
 
-    // this request will use the instance from the current browser pool resulting in faster response 
-    // resulting in faster response
+    // this request will use the instance from the current browser pool resulting in faster response
     const responseHackerNewsWithQuery = await getContent(HACKER_NEWS_QUERY_SPA_URL);
     console.log(responseHackerNewsWithQuery);
 })();
