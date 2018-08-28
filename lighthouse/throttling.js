@@ -33,7 +33,7 @@
 
 const puppeteer = require('puppeteer');
 const lighthouse = require('lighthouse');
-const ReportGenerator = require('lighthouse/lighthouse-core/report/v2/report-generator');
+// const ReportGenerator = require('lighthouse/lighthouse-core/report/v2/report-generator');
 const fs = require('fs');
 const {URL} = require('url');
 
@@ -65,9 +65,9 @@ browser.on('targetchanged', async target => {
 
 // Lighthouse opens url and tests it.
 // Note: Possible race with Puppeteer observing the tab opening using `targetchanged` above.
-const lhr = await lighthouse(url, {
+const {report} = await lighthouse(url, {
   port: remoteDebugPort,
-  output: 'json',
+  output: 'html',
   logLevel: 'info',
   disableNetworkThrottling: true,
   //disableCpuThrottling: true,
@@ -75,9 +75,8 @@ const lhr = await lighthouse(url, {
 });
 
 // Save html report.
-fs.writeFileSync('results.html', new ReportGenerator().generateReportHtml(lhr));
-
-console.log(`Lighthouse score: ${lhr.score}`);
+fs.writeFileSync('results.html', report);
+console.log('Results written.');
 
 await browser.close();
 })();

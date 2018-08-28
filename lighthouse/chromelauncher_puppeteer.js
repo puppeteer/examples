@@ -49,8 +49,8 @@ const {webSocketDebuggerUrl} = JSON.parse(resp.body);
 const browser = await puppeteer.connect({browserWSEndpoint: webSocketDebuggerUrl});
 
 // Run Lighthouse.
-const lhr = await lighthouse(URL, opts, null);
-console.log(`Lighthouse score: ${lhr.score}`);
+const {lhr} = await lighthouse(URL, opts, null);
+console.log(`Lighthouse scores: ${Object.values(lhr.categories).map(c => `${c.title} ${c.score}`).join(', ')}`);
 
 await browser.disconnect();
 await chrome.kill();
