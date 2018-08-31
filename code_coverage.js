@@ -24,7 +24,7 @@
  * Install:
  *   npm i puppeteer chalk cli-table
  * Run:
- *   URL=https://example.com node coverage.js
+ *   URL=https://example.com node code_coverage.js
  */
 
 const puppeteer = require('puppeteer');
