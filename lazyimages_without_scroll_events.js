@@ -96,7 +96,7 @@ async function screenshotPageAfterScroll(url) {
     let lastScrollTop = document.scrollingElement.scrollTop;
     // Scroll to bottom of page until we can't scroll anymore.
     const scroll = () => {
-      document.scrollingElement.scrollTop += viewPortHeight;
+      document.scrollingElement.scrollTop += (viewPortHeight / 2);
       if (document.scrollingElement.scrollTop !== lastScrollTop) {
         lastScrollTop = document.scrollingElement.scrollTop;
         requestAnimationFrame(scroll);
