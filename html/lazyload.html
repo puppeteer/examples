@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Lazy load examples</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Google+Sans:400,500,600">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: "Google Sans", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* text-rendering: optimizeLegibility; */
+    }
+    header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      background: url(https://picsum.photos/1800/300/?image=916) no-repeat 100% 50%;
+      height: 300px;
+      width: 100%;
+    }
+    header h1 {
+      font-size: 50px;
+    }
+    .hero {
+      width: 100%;
+      height: 200px;
+    }
+    iframe {
+      width: 100%;
+      height: 500px;
+      border: 0;
+    }
+    h1, h2 {
+      margin: 0;
+    }
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px;
+    }
+    main::first-letter {
+      font-size: 28px;
+      /* margin-right: 4px; */
+    }
+    .imagerow {
+      display: flex;
+      justify-content: space-evenly;
+    }
+    .rounded {
+      border-radius: 50%;
+      float: left;
+      width: 175px;
+      height: 175px;
+      margin-right: 16px;
+      margin-bottom: 8px;
+      shape-outside: circle(100px at 50% 50%);
+    }
+    .lazyload,
+    .lazyloading {
+      opacity: 0;
+    }
+    .lazyloaded {
+      opacity: 1;
+      transition: opacity 300ms;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <!-- <img src="https://picsum.photos/800/200/?random" class="hero"> -->
+  <h1>The Best Product Page Ever</h1>
+</header>
+
+<main>
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.</p>
+<img src="https://picsum.photos/400/400/?image=1043" class="rounded" lazyload="on">
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.</p>
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.</p>
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.</p>
+
+<p id="deeplink">Lazy loaded images using IntersectionObserver:</p>
+
+<div class="imagerow">
+  <img data-src="https://picsum.photos/200/300/?image=10">
+  <img data-src="https://picsum.photos/200/300/?image=20">
+  <img data-src="https://picsum.photos/200/300/?image=30">
+</div>
+
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.</p>
+
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.</p>
+
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.</p>
+
+<p>Iframe content:</p>
+<iframe data-src="https://example.com" lazyload="on"></iframe>
+
+<p id="deeplink2">Lazy loaded images using lazyload attribute:</p>
+
+<div class="imagerow">
+  <img data-original="https://picsum.photos/200/300/?image=1000" lazyload="on" class="lazyload">
+  <img data-original="https://picsum.photos/200/300/?image=1051" lazyload="on" class="lazyload">
+  <img data-original="https://picsum.photos/200/300/?image=1020" lazyload="on" class="lazyload">
+</div>
+
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vulputate sit
+amet massa id faucibus. Nam gravida pellentesque consectetur. Nulla suscipit blandit
+tristique. Proin ut diam eu mi fermentum bibendum ac a lacus. Donec dui enim, rhoncus vel cursus
+at, feugiat et purus. Phasellus nec varius elit. In hac habitasse platea dictumst. Donec
+dictum placerat ante, sit amet tempus ante varius vitae.</p>
+
+<p>End of page</p>
+
+</main>
+
+<script src="https://afarkas.github.io/lazysizes/lazysizes.min.js"></script>
+<script type="module">
+(() => {
+
+function lazyLoadWhenVisible() {
+  const observer = new IntersectionObserver((records, observer) => {
+    for (const record of records) {
+      const el = record.target;
+      if (!el.src && record.isIntersecting) {
+        el.src = el.dataset.src;
+        delete el.dataset.src;
+        observer.unobserve(el);
+      }
+    }
+  }, {
+    // rootMargin: '100px',
+  });
+
+  const els = document.querySelectorAll('img[data-src],iframe[data-src]');
+  Array.from(els).forEach(el => observer.observe(el));
+}
+
+window.lazySizesConfig = window.lazySizesConfig || {};
+// window.lazySizesConfig.lazyClass = 'lazy';
+lazySizesConfig.srcAttr = 'data-original';
+
+if ('IntersectionObserver' in window) {
+  lazyLoadWhenVisible();
+} else {
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://cdn.polyfill.io/v2/polyfill.js?features=IntersectionObserver';
+  s.onload = lazyLoadWhenVisible;
+  document.body.appendChild(s);
+  // await import('../node_modules/intersection-observer/intersection-observer.js');
+}
+})();
+
+// document.addEventListener('scroll', e => console.log(e));
+// window.addEventListener('scroll', e => console.log(e));
+</script>
+</body>
+</html>
