@@ -24,14 +24,18 @@
   * Usage:
   *
   *     node lazyimages_without_scroll_events.js -h
-  *     node lazyimages_without_scroll_events.js --url=https://rawgit.com/GoogleChromeLabs/puppeteer-examples/master/html/lazyload.html // PASSES. Uses IntersectionObserver.
-  *     node lazyimages_without_scroll_events.js --url=https://css-tricks.com/examples/LazyLoading/ // FAILS. uses scroll events.
-  *     node lazyimages_without_scroll_events.js --url=http://dinbror.dk/blazy/ -o results.html --save // FAIL. Uses scroll events.
+  *     // PASSES. Uses IntersectionObserver and lazyimages.js checks image visibility on page load without needing scroll events.
+  *     node lazyimages_without_scroll_events.js --url=https://rawgit.com/GoogleChromeLabs/puppeteer-examples/master/html/lazyload.html
+  *     // FAILS. uses scroll events.
+  *     node lazyimages_without_scroll_events.js --url=https://css-tricks.com/examples/LazyLoading/
+  *     // FAIL. Uses scroll events.
+  *     node lazyimages_without_scroll_events.js --url=http://dinbror.dk/blazy/ -o results.html --save
   */
 
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const PixelDiff = require('pixel-diff');
+const PNG = require('pngjs').PNG;
 
 const argv = require('yargs')
 .options({
@@ -61,20 +65,31 @@ const argv = require('yargs')
 (async() => {
 
 const defaultViewport = {
-  width: 800,
+  width: 1000,
   height: 2000,
-  deviceScaleFactor: 2,
+  deviceScaleFactor: 1,
 };
 
 const browser = await puppeteer.launch({
   // headless: false,
-  // defaultViewport,
+  defaultViewport,
 });
 
 async function screenshotPage(url) {
   const context = await browser.createIncognitoBrowserContext();
 
   const page = await context.newPage();
+
+  // // Prevent page from scrolling.
+  // page.on('console', msg => console.log(msg.text()));
+  // await page.evaluate(() => {
+  //   document.addEventListener('scroll', e => {
+  //     console.log('scroll');
+  //     e.stopImmediatePropagation();
+  //     e.stopPropagation();
+  //   });
+  // });
+
   await page.goto(url, {waitUntil: 'networkidle2'});
   await page.waitFor(2000); // Wait a bit more in case other things are loading.
   const buffer = await page.screenshot({
@@ -122,18 +137,26 @@ const screenshots = await Promise.all([
   screenshotPageAfterScroll(argv.url),
 ]);
 
+const pngA = PNG.sync.read(screenshots[0]);
+const pngB = PNG.sync.read(screenshots[1]);
+
 const diff = new PixelDiff({
   imageA: screenshots[0],
   imageB: screenshots[1],
   thresholdType: PixelDiff.THRESHOLD_PERCENT, // thresholdType: PixelDiff.RESULT_DIFFERENT,
   threshold: 0.01, // 1% threshold
   imageOutputPath: argv.save ? 'page_diff.png' : null,
+  // copyImageBToOutput: true,
+  // copyImageAToOutput: false,
 });
 
 const result = await diff.runWithPromise();
-const passed = diff.hasPassed(result.code);
+const sameDimensions = pngA.height === pngB.height && pngA.width === pngB.width;
+const passed = diff.hasPassed(result.code) && sameDimensions;
 console.log(`Lazy images loaded correctly: ${passed ? 'Passed' : 'Failed'}`);
-console.log(`Found ${result.differences} differences.`);
+console.log(`Found ${result.differences} pixels differences.`);
+console.log(`Dimension image A: ${pngA.width}x${pngA.height}`);
+console.log(`Dimension image B: ${pngB.width}x${pngB.height}`);
 
 // const diffBuffer = fs.readFileSync('page_diff.png', {encoding: 'utf8'});
 
