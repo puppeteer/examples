@@ -204,7 +204,7 @@ await page.setContent(`
           use a more modern approach like
           <a href="https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API">IntersectionObserver</a> with a
           <a href="https://github.com/w3c/IntersectionObserver/tree/master/polyfill">polyfill</a>.
-          If you're using library for lazy loading, check out <a href="https://github.com/aFarkas/lazysizes">lazysizes.js</a>.</p>
+          If you're using library for lazy loading, find one that doesn't use scroll events.</p>
         </header>
         <h2 class="check">Site result: <span class="${passed ? 'passed' : 'failed'}">${passed ? 'PASSED' : 'FAILED'}</span></h2>
         <section>
