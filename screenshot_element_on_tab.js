@@ -22,7 +22,7 @@
 
 const puppeteer = require('puppeteer');
 
-const AUTO_TAB = !false; // If true, tabbing through elements is down automatically.
+const AUTO_TAB = !false; // If true, tabbing through elements is done automatically.
 const padding = 25; // padding around the element screenshot.
 const url = process.env.URL || 'https://perf-sandbox.appspot.com/';
 
