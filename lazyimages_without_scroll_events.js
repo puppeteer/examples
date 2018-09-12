@@ -36,6 +36,19 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const PixelDiff = require('pixel-diff');
 const PNG = require('pngjs').PNG;
+const resizeImg = require('resize-img');
+
+const DEFAULT_VIEWPORT = {
+  width: 1000,
+  height: 2000,
+  deviceScaleFactor: 1,
+};
+
+const PNG_NOSCROLL_FILENAME = 'page_noscroll.png';
+const PNG_SCROLL_FILENAME = 'page_scroll.png';
+const PNG_DIFF_FILENAME = 'page_diff.png';
+
+const WAIT_FOR = 2000; // Additional seconds to wait after page is considered load.
 
 const argv = require('yargs')
 .options({
@@ -48,52 +61,62 @@ const argv = require('yargs')
     alias: 'u',
     describe: 'URL to load',
     demandOption: true,
+    type: 'string',
   },
   'output': {
     alias: 'o',
     describe: 'Output HTML file',
     default: 'results.html',
+    type: 'string',
+  },
+  'scroll': {
+    describe: 'Filename for screenshot of scrolled page. Only worked with --save option.',
+    default: PNG_SCROLL_FILENAME,
+  },
+  'noscroll': {
+    describe: 'Filename for screenshot of non-scrolled page. Only worked with --save option.',
+    default: PNG_NOSCROLL_FILENAME,
+  },
+  'diff': {
+    describe: 'Filename for diff screenshot between pages.',
+    default: PNG_DIFF_FILENAME,
   },
 })
 .help()
-// .example('$0 --url https://devwebfeed.appspot.com https://devwebfeed.appspot.com/ssr')
-// .example('$0 --no-throttle --no-mobile -u https://devwebfeed.appspot.com https://devwebfeed.appspot.com/ssr')
-// .example('$0 -u https://www.bing.com/ https://www.google.com/ https://www.yahoo.com/')
-// .wrap(null)
 .argv;
 
 (async() => {
 
-const defaultViewport = {
-  width: 1000,
-  height: 2000,
-  deviceScaleFactor: 1,
-};
-
 const browser = await puppeteer.launch({
   // headless: false,
-  defaultViewport,
+  defaultViewport: DEFAULT_VIEWPORT,
 });
 
-async function screenshotPage(url) {
+async function screenshotPageWithoutScroll(url) {
   const context = await browser.createIncognitoBrowserContext();
 
   const page = await context.newPage();
 
-  // // Prevent page from scrolling.
+  // Set viewport height to same as the page when it's completely scrolled
+  // so final screenshot is same height.
+  // const viewport = Object.assign({}, DEFAULT_VIEWPORT);
+  // viewport.height = maxScrollHeight;
+  // await page.setViewport(viewport);
+
+  // Prevent page from scrolling.
   // page.on('console', msg => console.log(msg.text()));
   // await page.evaluate(() => {
   //   document.addEventListener('scroll', e => {
-  //     console.log('scroll');
+  //     console.log('scroll!');
   //     e.stopImmediatePropagation();
   //     e.stopPropagation();
   //   });
   // });
 
   await page.goto(url, {waitUntil: 'networkidle2'});
-  await page.waitFor(2000); // Wait a bit more in case other things are loading.
+  await page.waitFor(WAIT_FOR); // Wait a bit more in case other things are loading.
   const buffer = await page.screenshot({
-    path: argv.save ? 'page_noscroll.png': null,
+    path: argv.save ? argv.noscroll : null,
     fullPage: true
   });
   await context.close();
@@ -107,11 +130,11 @@ async function screenshotPageAfterScroll(url) {
   await page.goto(url, {waitUntil: 'networkidle2'});
 
   await page.evaluate(() => {
-    const viewPortHeight = document.documentElement.clientHeight;
+    // const viewPortHeight = document.documentElement.clientHeight;
     let lastScrollTop = document.scrollingElement.scrollTop;
     // Scroll to bottom of page until we can't scroll anymore.
     const scroll = () => {
-      document.scrollingElement.scrollTop += (viewPortHeight / 2);
+      document.scrollingElement.scrollTop += 100;//(viewPortHeight / 2);
       if (document.scrollingElement.scrollTop !== lastScrollTop) {
         lastScrollTop = document.scrollingElement.scrollTop;
         requestAnimationFrame(scroll);
@@ -120,45 +143,69 @@ async function screenshotPageAfterScroll(url) {
     scroll();
   });
 
-  await page.waitFor(2000); // Wait a bit more in case other things are loading.
+  await page.waitFor(WAIT_FOR); // Wait a bit more in case other things are loading.
+
+  // const maxScrollHeight = await page.evaluate(
+  //     'document.scrollingElement.scrollHeight');
 
   const buffer = await page.screenshot({
-    path: argv.save ? 'page_scroll.png': null,
+    path: argv.save ? argv.scroll : null,
     fullPage: true
   });
 
   await context.close();
-  return buffer;
+  return {screenshot: buffer};
 }
 
-// Take screen of the page with and without scrolling it.
-const screenshots = await Promise.all([
-  screenshotPage(argv.url),
-  screenshotPageAfterScroll(argv.url),
-]);
+async function resizeImage(pngBuffer, scale = 0.5) {
+  const png = PNG.sync.read(pngBuffer);
+  pngBuffer = await resizeImg(pngBuffer, {
+    width: Math.round(png.width * scale),
+    height: Math.round(png.height * scale),
+  });
+  return {buffer: pngBuffer, png: PNG.sync.read(pngBuffer)};
+}
 
-const pngA = PNG.sync.read(screenshots[0]);
-const pngB = PNG.sync.read(screenshots[1]);
+// First take screenshot of page scrolling it. This will also allow us to
+// determine the total scroll height of the page and set the viewport for
+// the unscrolled page.
+let {screenshot: screenshotB} = await screenshotPageAfterScroll(argv.url);
+let screenshotA = await screenshotPageWithoutScroll(argv.url);
+
+let pngA = PNG.sync.read(screenshotA);
+let pngB = PNG.sync.read(screenshotB);
+// const sameDimensions = pngA.height === pngB.height && pngA.width === pngB.width;
 
 const diff = new PixelDiff({
-  imageA: screenshots[0],
-  imageB: screenshots[1],
+  imageA: screenshotA,
+  imageB: screenshotB,
   thresholdType: PixelDiff.THRESHOLD_PERCENT, // thresholdType: PixelDiff.RESULT_DIFFERENT,
   threshold: 0.01, // 1% threshold
-  imageOutputPath: argv.save ? 'page_diff.png' : null,
+  imageOutputPath: argv.diff,
+  // composeTopToBottom: true,
   // copyImageBToOutput: true,
   // copyImageAToOutput: false,
+  cropImageB: {
+    x: 0,
+    y: 0,
+    width: pngA.width,
+    height: pngA.height,
+  },
 });
 
 const result = await diff.runWithPromise();
-const sameDimensions = pngA.height === pngB.height && pngA.width === pngB.width;
-const passed = diff.hasPassed(result.code) && sameDimensions;
+
+const passed = diff.hasPassed(result.code);// && sameDimensions;
 console.log(`Lazy images loaded correctly: ${passed ? 'Passed' : 'Failed'}`);
 console.log(`Found ${result.differences} pixels differences.`);
+
+({png: pngA, buffer: screenshotA} = await resizeImage(screenshotA, 0.25));
+({png: pngB, buffer: screenshotB} = await resizeImage(screenshotB, 0.25));
+
 console.log(`Dimension image A: ${pngA.width}x${pngA.height}`);
 console.log(`Dimension image B: ${pngB.width}x${pngB.height}`);
 
-// const diffBuffer = fs.readFileSync('page_diff.png', {encoding: 'utf8'});
+const {png: pngDiff, buffer: diffBuffer} = await resizeImage(fs.readFileSync(argv.diff), 0.25);
 
 const page = await browser.newPage();
 await page.setContent(`
@@ -183,7 +230,8 @@ await page.setContent(`
           }
           body > section > div {
             padding: 8px;
-            width: 100%;
+            flex: 1;
+            text-align: center;
           }
           h1 {
             color: #0D47A1;
@@ -192,6 +240,12 @@ await page.setContent(`
             padding: 0;
             text-align: center;
             font-weight: inherit;
+          }
+          .url {
+            text-align: center;
+          }
+          .url a {
+            color: #0D47A1;
           }
           .check {
             padding: 8px;
@@ -203,7 +257,7 @@ await page.setContent(`
           }
           .summary {
             color: #757575;
-            min-height: 80px;
+            min-height: 100px;
           }
           .passed {
             color: #00C853;
@@ -212,6 +266,9 @@ await page.setContent(`
           .failed {
             color: #D50000;
             font-weight: 600;
+          }
+          .screenshot {
+            /*max-height: ${pngDiff.height}px;*/
           }
         </style>
       </head>
@@ -230,20 +287,26 @@ await page.setContent(`
           If you're using library for lazy loading, find one that doesn't use scroll events.</p>
         </header>
         <h2 class="check">Site result: <span class="${passed ? 'passed' : 'failed'}">${passed ? 'PASSED' : 'FAILED'}</span></h2>
+        <div class="url"><a href="${argv.url}">${argv.url}</a></div>
         <section>
           <div>
             <h2>Page without being scrolled</h2>
-            <p class="summary">This is how the images on your page appear to a search engine.
+            <p class="summary">This is how the lazy loaded images on your page appear to a search engine.
             Does it look right? If images are missing, they might be lazy loaded
-            using scroll events. Instead, consider using another approach like
-            IntersectionObserver.</p>
-            <img src="data:img/png;base64,${screenshots[0].toString('base64')}">
+            using scroll events.</p>
+            <img src="data:img/png;base64,${screenshotA.toString('base64')}" class="screenshot">
+          </div>
+          <div>
+            <h2>&nbsp;</h2>
+            <p class="summary">( difference between two screenshots )</p>
+            <img src="data:img/png;base64,${diffBuffer.toString('base64')}" class="screenshot">
           </div>
           <div>
             <h2>Page after scrolling</h2>
-            <p class="summary">If there are more images below, the page is probably using scroll
-            events to lazy load images.</p>
-            <img src="data:img/png;base64,${screenshots[1].toString('base64')}">
+            <p class="summary">If there are more images in the screenshot below,
+            the page is using scroll events to lazy load images. Instead, consider using another approach like
+            IntersectionObserver.</p>
+            <img src="data:img/png;base64,${screenshotB.toString('base64')}" class="screenshot">
           </div>
         </section>
       </body>
