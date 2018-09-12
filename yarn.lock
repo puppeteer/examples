@@ -1711,9 +1711,9 @@ punycode@^1.4.1:
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/punycode/-/punycode-1.4.1.tgz#c0d5a63b2718800ad8e1eb0fa5269c84dd41845e"
 
-puppeteer@^1.7.0-next.1536001811008:
-  version "1.7.0-next.1536001811008"
-  resolved "https://registry.yarnpkg.com/puppeteer/-/puppeteer-1.7.0-next.1536001811008.tgz#762c2f961cb34f68df925e06dd22522180b22135"
+puppeteer@^1.8.0:
+  version "1.8.0"
+  resolved "https://registry.yarnpkg.com/puppeteer/-/puppeteer-1.8.0.tgz#9e8bbd2f5448cc19cac220efc0512837104877ad"
   dependencies:
     debug "^3.1.0"
     extract-zip "^1.6.6"
