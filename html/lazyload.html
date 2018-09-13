@@ -183,7 +183,7 @@ function lazyLoadWhenVisible() {
   });
 
   const els = document.querySelectorAll('img[data-src],iframe[data-src]');
-  Array.from(els).forEach(function(el) {
+  [].forEach.call(els, function(el) {
     observer.observe(el);
   });
 }
