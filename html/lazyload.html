@@ -169,7 +169,7 @@ window.lazySizesConfig = window.lazySizesConfig || {};
 lazySizesConfig.srcAttr = 'data-original';
 
 function lazyLoadWhenVisible() {
-  const observer = new IntersectionObserver((records, observer) => {
+  const observer = new IntersectionObserver(function(records, observer) {
     for (const record of records) {
       const el = record.target;
       if (!el.src && record.isIntersecting) {
@@ -183,15 +183,18 @@ function lazyLoadWhenVisible() {
   });
 
   const els = document.querySelectorAll('img[data-src],iframe[data-src]');
-  Array.from(els).forEach(el => observer.observe(el));
+  Array.from(els).forEach(function(el) {
+    observer.observe(el);
+  });
 }
 
-async function loadIOPolyfillIfNeeded() {
+function loadIOPolyfillIfNeeded() {
   if ('IntersectionObserver' in window) {
     return Promise.resolve();
   }
 
-  return new Promise((resolve, reject) => {
+  // Note: chrome 41 doesn't support arrow functions
+  return new Promise(function(resolve, reject) {
     const s = document.createElement('script');
     s.async = true;
     s.src = 'https://cdn.polyfill.io/v2/polyfill.js?features=IntersectionObserver'; ///https://unpkg.com/intersection-observer/intersection-observer.js
