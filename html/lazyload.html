@@ -163,8 +163,10 @@ dictum placerat ante, sit amet tempus ante varius vitae.</p>
 </main>
 
 <script src="https://afarkas.github.io/lazysizes/lazysizes.min.js"></script>
-<script type="module">
-(() => {
+<script>
+window.lazySizesConfig = window.lazySizesConfig || {};
+// window.lazySizesConfig.lazyClass = 'lazy';
+lazySizesConfig.srcAttr = 'data-original';
 
 function lazyLoadWhenVisible() {
   const observer = new IntersectionObserver((records, observer) => {
@@ -184,24 +186,33 @@ function lazyLoadWhenVisible() {
   Array.from(els).forEach(el => observer.observe(el));
 }
 
-window.lazySizesConfig = window.lazySizesConfig || {};
-// window.lazySizesConfig.lazyClass = 'lazy';
-lazySizesConfig.srcAttr = 'data-original';
+async function loadIOPolyfillIfNeeded() {
+  if ('IntersectionObserver' in window) {
+    return Promise.resolve();
+  }
 
-if ('IntersectionObserver' in window) {
-  lazyLoadWhenVisible();
-} else {
-  const s = document.createElement('script');
-  s.async = true;
-  s.src = 'https://cdn.polyfill.io/v2/polyfill.js?features=IntersectionObserver';
-  s.onload = lazyLoadWhenVisible;
-  document.body.appendChild(s);
-  // await import('../node_modules/intersection-observer/intersection-observer.js');
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://cdn.polyfill.io/v2/polyfill.js?features=IntersectionObserver'; ///https://unpkg.com/intersection-observer/intersection-observer.js
+    s.onload = resolve;
+    s.onerror = reject;
+    document.body.appendChild(s);
+    // await import('../node_modules/intersection-observer/intersection-observer.js');
+  });
 }
+</script>
+<script type="module">
+(async () => {
+  await loadIOPolyfillIfNeeded();
+  lazyLoadWhenVisible();
 })();
 
 // document.addEventListener('scroll', e => console.log(e));
 // window.addEventListener('scroll', e => console.log(e));
+</script>
+<script nomodule>
+  loadIOPolyfillIfNeeded().then(lazyLoadWhenVisible);
 </script>
 </body>
 </html>
