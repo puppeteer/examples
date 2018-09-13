@@ -170,14 +170,14 @@ lazySizesConfig.srcAttr = 'data-original';
 
 function lazyLoadWhenVisible() {
   const observer = new IntersectionObserver(function(records, observer) {
-    for (const record of records) {
+    records.forEach(function(record) {
       const el = record.target;
       if (!el.src && record.isIntersecting) {
         el.src = el.dataset.src;
         delete el.dataset.src;
         observer.unobserve(el);
       }
-    }
+    });
   }, {
     // rootMargin: '100px',
   });
