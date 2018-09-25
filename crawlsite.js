@@ -71,21 +71,7 @@ function mkdirSync(dirPath) {
  * @return {!Array<string>} List of anchor hrefs.
  */
 function collectAllSameOriginAnchorsDeep(sameOrigin = true) {
-  const allElements = [];
-
-  const findAllElements = function(nodes) {
-    for (let i = 0, el; el = nodes[i]; ++i) {
-      allElements.push(el);
-      // If the element has a shadow root, dig deeper.
-      if (el.shadowRoot) {
-        findAllElements(el.shadowRoot.querySelectorAll('*'));
-      }
-    }
-  };
-
-  findAllElements(document.querySelectorAll('*'));
-
-  const filtered = allElements
+  const filtered = Array.from(document.links)
     .filter(el => el.localName === 'a' && el.href) // element is an anchor with an href.
     .filter(el => el.href !== location.href) // link doesn't point to page's own URL.
     .filter(el => {
@@ -161,7 +147,6 @@ mkdirSync(OUT_DIR); // create output dir if it doesn't exist.
 await del([`${OUT_DIR}/*`]); // cleanup after last run.
 
 const browser = await puppeteer.launch();
-const page = await browser.newPage();
 if (VIEWPORT) {
   await page.setViewport(VIEWPORT);
 }
