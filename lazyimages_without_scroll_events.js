@@ -92,6 +92,18 @@ const browser = await puppeteer.launch({
   defaultViewport: DEFAULT_VIEWPORT,
 });
 
+// async function waitForNetworkIdle(page, idle='networkidle0') {
+//   return new Promise(resolve => {
+//     page._client.on('Page.lifecycleEvent', e => {
+//       if (e.name === 'networkIdle' && idle === 'networkidle0') {
+//         resolve();
+//       } else if (e.name === 'networkAlmostIdle' && idle === 'networkidle2') {
+//         resolve();
+//       }
+//     });
+//   });
+// }
+
 async function screenshotPageWithoutScroll(url) {
   const context = await browser.createIncognitoBrowserContext();
 
@@ -115,6 +127,7 @@ async function screenshotPageWithoutScroll(url) {
 
   await page.goto(url, {waitUntil: 'networkidle2'});
   await page.waitFor(WAIT_FOR); // Wait a bit more in case other things are loading.
+  // await waitForNetworkIdle(page, 'networkidle0'); // wait for network to be idle.
   const buffer = await page.screenshot({
     path: argv.save ? argv.noscroll : null,
     fullPage: true
@@ -144,6 +157,7 @@ async function screenshotPageAfterScroll(url) {
   });
 
   await page.waitFor(WAIT_FOR); // Wait a bit more in case other things are loading.
+  // await waitForNetworkIdle(page, 'networkidle0'); // wait for network to be idle.
 
   // const maxScrollHeight = await page.evaluate(
   //     'document.scrollingElement.scrollHeight');
