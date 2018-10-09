@@ -22,6 +22,12 @@ Gut check your page to make sure it renders correctly for Google Search.
 
 <img width="500" alt="screen shot 2018-03-07 at 12 50 32 pm" src="https://user-images.githubusercontent.com/238208/37125450-804ad8c0-2221-11e8-8c96-7c5af582778f.png">
 
+### [lazyimages_without_scroll_events.js](./lazyimages_without_scroll_events.jss)
+
+Determine if your lazy loaded images will be seen correctly by Google Search.
+
+<img width="500" alt="screen shot 2018-10-09 at 12 15 10 pm" src="https://user-images.githubusercontent.com/238208/46697053-98aa5e80-cbc8-11e8-91c3-d5cf7937f3f7.png">
+
 ### [speech.js](./speech.js)
 
 Make your browser talk.
