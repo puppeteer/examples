@@ -21,8 +21,8 @@
  * PDF of it. Shows how to use Puppeteer to:
  *
  *   1. screenshot a DOM element
- *   2. craft an HTML page on-th-fly.
- *   3. produce an image of the element and PDF of the page with the image embedded.
+ *   2. craft an HTML page on-the-fly
+ *   3. produce an image of the element and PDF of the page with the image embedded
  *
  * Usage:
  *   node element-to-pdf.js
