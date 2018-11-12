@@ -45,6 +45,7 @@ const URL = process.env.URL || 'https://news.polymer-project.org/';
 const SCREENSHOTS = process.argv.includes('--screenshots');
 const DEPTH = parseInt(process.env.DEPTH) || 2;
 const VIEWPORT = SCREENSHOTS ? {width: 1028, height: 800, deviceScaleFactor: 2} : null;
+const SITEMAP = process.argv.includes('--sitemap');
 const OUT_DIR = process.env.OUTDIR || `output/${slugify(URL)}`;
 
 const crawledPages = new Map();
@@ -161,6 +162,28 @@ async function crawl(browser, page, depth = 0) {
   }
 }
 
+function buildSitemap() {
+  if (SITEMAP && crawledPages) {
+    var p = "";
+    crawledPages.forEach(element => {
+      var n = "\t\t<url>\n";
+      n = n + "\t\t\t<loc>\n";
+      n = n + `\t\t\t\t${element.url}\n`;
+      n = n + "\t\t\t</loc>\n";
+      n = n + "\t\t</url>\n";
+
+      p = p + n;
+    });    
+    var sm = "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n";
+    sm = sm + "\t<urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>\n";
+    sm = sm + p + "\t</urlset>\n";
+    const path = `./${OUT_DIR}/sitemap.xml`;
+    fs.writeFile(path, sm, function (err) {
+      if (err) throw err;      
+    });    
+  }
+}
+
 (async() => {
 
 mkdirSync(OUT_DIR); // create output dir if it doesn't exist.
@@ -174,6 +197,10 @@ if (VIEWPORT) {
 
 const root = {url: URL};
 await crawl(browser, root);
+
+if (SITEMAP) {
+  buildSitemap(); 
+}
 
 await util.promisify(fs.writeFile)(`./${OUT_DIR}/crawl.json`, JSON.stringify(root, null, ' '));
 
