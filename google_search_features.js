@@ -223,7 +223,7 @@ function findTraceStartEvent(events) {
     if (pid && tid) {
       return {
         pid,
-        tid,
+        tid
       };
     }
   }
@@ -233,7 +233,7 @@ function findTraceStartEvent(events) {
   if (startedInPageEvt && startedInPageEvt.args && startedInPageEvt.args.data) {
     return {
       pid: startedInPageEvt.pid,
-      tid: startedInPageEvt.tid,
+      tid: startedInPageEvt.tid
     };
   }
 }
