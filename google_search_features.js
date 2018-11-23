@@ -189,7 +189,7 @@ async function collectFeatureTraceEvents(browser) {
 
   // Filter out all trace events that aren't 1. blink feature usage
   // and 2. from the same process/thread id as our test page's main thread.
-  const traceStartEvent = trace.traceEvents.find(e => e.name === 'TracingStartedInPage');
+  const traceStartEvent = findTraceStartEvent(trace.traceEvents);
   const events = trace.traceEvents.filter(e => {
     return e.cat === 'disabled-by-default-blink.feature_usage' &&
            e.pid === traceStartEvent.pid && e.tid === traceStartEvent.tid;
@@ -205,6 +205,37 @@ async function collectFeatureTraceEvents(browser) {
   await page.close();
 
   return events;
+}
+
+/**
+ * @param {Array} events
+ * @return {Object}
+ */
+function findTraceStartEvent(events) {
+  const startedInBrowserEvt = events.find(e => e.name === 'TracingStartedInBrowser');
+  if (startedInBrowserEvt && startedInBrowserEvt.args.data && startedInBrowserEvt.args.data.frames) {
+    const mainFrame = startedInBrowserEvt.args.data.frames.find(frame => !frame.parent);
+    const pid = mainFrame && mainFrame.processId;
+    const threadNameEvt = events.find(e => e.pid === pid && e.ph === 'M' &&
+      e.cat === '__metadata' && e.name === 'thread_name' && e.args.name === 'CrRendererMain');
+
+    const tid = threadNameEvt && threadNameEvt.tid;
+    if (pid && tid) {
+      return {
+        pid,
+        tid,
+      };
+    }
+  }
+
+  // // Support legacy browser versions
+  const startedInPageEvt = events.find(e => e.name === 'TracingStartedInPage');
+  if (startedInPageEvt && startedInPageEvt.args && startedInPageEvt.args.data) {
+    return {
+      pid: startedInPageEvt.pid,
+      tid: startedInPageEvt.tid,
+    };
+  }
 }
 
 /**
