@@ -11,25 +11,25 @@
     "node": ">=8"
   },
   "dependencies": {
-    "caniuse-db": "^1.0.30000884",
+    "caniuse-db": "^1.0.30000921",
     "chalk": "^2.3.2",
-    "chrome-har": "^0.3.1",
-    "chrome-launcher": "^0.10.2",
+    "chrome-har": "^0.7.1",
+    "chrome-launcher": "^0.10.5",
     "cli-table": "^0.3.1",
     "del": "^3.0.0",
-    "express": "^4.16.3",
-    "lighthouse": "^3.0.3",
-    "mime": "^2.3.1",
-    "node-fetch": "^2.1.2",
+    "express": "^4.16.4",
+    "lighthouse": "^4.0.0-alpha.2-3.2.1",
+    "mime": "^2.4.0",
+    "node-fetch": "^2.3.0",
     "pixel-diff": "^1.0.1",
     "pngjs": "^3.3.3",
-    "puppeteer": "^1.8.0",
-    "request": "^2.85.0",
+    "puppeteer": "^1.11.0",
+    "request": "^2.88.0",
     "request-promise": "^4.2.2",
     "request-promise-native": "^1.0.5",
     "resize-img": "^1.1.2",
-    "sharp": "^0.20.1",
-    "ws": "^5.1.1",
-    "yargs": "^11.0.0"
+    "sharp": "^0.21.1",
+    "ws": "^6.1.2",
+    "yargs": "^12.0.5"
   }
 }
