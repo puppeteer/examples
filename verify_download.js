@@ -17,8 +17,9 @@
  */
 
 /**
- * Shows how to click a file download link and verify that that file gets
- * downloaded to the local filesystem in the expected location.
+ * Shows how to click a file download link and verify that the file gets
+ * downloaded to the expected download location in the filesystem. Typically,
+ * ~/Downloads.
  * Note: this approach only works in headful Chrome.
  *
  * Install:
