@@ -41,6 +41,8 @@ const DOWNLOADS_FOLDER = `${os.homedir()}/Downloads`;
  * occurs.
  * @param {string} filePath
  * @param {integer} timeout
+ * @returns {!Promise<undefined>} Resolves when file has been created. Rejects
+ *     if timout is reached.
  */
 function checkFileExists(filePath, timeout=15000) {
   return new Promise((resolve, reject) => {
@@ -51,7 +53,7 @@ function checkFileExists(filePath, timeout=15000) {
       if (eventType === 'rename' && filename === basename) {
         clearTimeout(timer);
         watcher.close();
-        resolve(basename);
+        resolve();
       }
     });
 
@@ -64,7 +66,7 @@ function checkFileExists(filePath, timeout=15000) {
       if (!err) {
         clearTimeout(timer);
         watcher.close();
-        resolve(basename);
+        resolve();
       }
     });
   });
@@ -153,7 +155,6 @@ if (!downloadUrl) {
 
 // 3. Open chrome:downloads and wait for the file to be downloaded.
 const fileMeta = await waitForFileToDownload(browser, downloadUrl);
-
 console.log(`"${fileMeta.file_name}" was downloaded`);
 
 // 4. Optionally check that the file really ends up in the expected location
