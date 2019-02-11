@@ -50,8 +50,9 @@ const OUT_DIR = process.env.OUTDIR || `output/${slugify(URL)}`;
 const crawledPages = new Map();
 const maxDepth = DEPTH; // Subpage depth to crawl site.
 
+// Replaces characters from the URL which are illegal in a file path for working dir and saving screenshots.
 function slugify(str) {
-  return str.replace(/[\/:]/g, '_');
+    return str.replace(/[\/:?*%|"<>. ]/g, '_');
 }
 
 function mkdirSync(dirPath) {
