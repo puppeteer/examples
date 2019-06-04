@@ -125,7 +125,7 @@ async function screenshotPageWithoutScroll(url) {
   //   });
   // });
 
-  await page.goto(url, {waitUntil: 'networkidle2'});
+  await page.goto(url, {waitUntil: 'networkidle2', timeout: 0});
   await page.waitFor(WAIT_FOR); // Wait a bit more in case other things are loading.
   // await waitForNetworkIdle(page, 'networkidle0'); // wait for network to be idle.
   const buffer = await page.screenshot({
@@ -140,7 +140,7 @@ async function screenshotPageAfterScroll(url) {
   const context = await browser.createIncognitoBrowserContext();
 
   const page = await context.newPage();
-  await page.goto(url, {waitUntil: 'networkidle2'});
+  await page.goto(url, {waitUntil: 'networkidle2', timeout: 0});
 
   await page.evaluate(() => {
     // const viewPortHeight = document.documentElement.clientHeight;
