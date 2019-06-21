@@ -125,6 +125,7 @@ async function screenshotPageWithoutScroll(url) {
   //   });
   // });
 
+  page.setUserAgent('Googlebot/2.1 (+http://www.googlebot.com/bot.html)');
   await page.goto(url, {waitUntil: 'networkidle2'});
   await page.waitFor(WAIT_FOR); // Wait a bit more in case other things are loading.
   // await waitForNetworkIdle(page, 'networkidle0'); // wait for network to be idle.
