@@ -16,26 +16,26 @@
  * @author ebidel@ (Eric Bidelman)
  */
 
- /**
-  * Discovers all the pages in site or single page app (SPA) and creates
-  * a tree of the result in ./output/<site slug/crawl.json. Optionally
-  * takes screenshots of each page as it is visited. Also, optionally 
-  * builds a sitemap.xml of the visited pages.
-  *
-  * Usage:
-  *   node crawlsite.js
-  *   URL=https://yourspa.com node crawlsite.js
-  *   URL=https://yourspa.com node crawlsite.js --screenshots
-  *   URL=https://yourspa.com node crawlsite.js --sitemap
-  *
-  * Then open the visualizer in a browser:
-  *   http://localhost:8080/html/d3tree.html
-  *   http://localhost:8080/html/d3tree.html?url=../output/https___yourspa.com/crawl.json
-  *
-  *Start Server:
-  *   node server.js
-  *
-  */
+/**
+ * Discovers all the pages in site or single page app (SPA) and creates
+ * a tree of the result in ./output/<site slug/crawl.json. Optionally
+ * takes screenshots of each page as it is visited. Also, optionally 
+ * builds a sitemap.xml of the visited pages.
+ *
+ * Usage:
+ *   node crawlsite.js
+ *   URL=https://yourspa.com node crawlsite.js
+ *   URL=https://yourspa.com node crawlsite.js --screenshots
+ *   URL=https://yourspa.com node crawlsite.js --sitemap
+ *
+ * Then open the visualizer in a browser:
+ *   http://localhost:8080/html/d3tree.html
+ *   http://localhost:8080/html/d3tree.html?url=../output/https___yourspa.com/crawl.json
+ *
+ *Start Server:
+ *   node server.js
+ *
+ */
 
 const fs = require('fs');
 const del = require('del');
@@ -46,7 +46,7 @@ const sharp = require('sharp');
 const URL = process.env.URL || 'https://news.polymer-project.org/';
 const SCREENSHOTS = process.argv.includes('--screenshots');
 const DEPTH = parseInt(process.env.DEPTH) || 2;
-const VIEWPORT = SCREENSHOTS ? {width: 1028, height: 800, deviceScaleFactor: 2} : null;
+const VIEWPORT = SCREENSHOTS ? { width: 1028, height: 800, deviceScaleFactor: 2 } : null;
 const SITEMAP = process.argv.includes('--sitemap');
 const { createSitemap } = require('sitemap');
 const OUT_DIR = process.env.OUTDIR || `output/${slugify(URL)}`;
@@ -83,7 +83,7 @@ function mkdirSync(dirPath) {
 function collectAllSameOriginAnchorsDeep(sameOrigin = true) {
   const allElements = [];
 
-  const findAllElements = function(nodes) {
+  const findAllElements = function (nodes) {
     for (let i = 0, el; el = nodes[i]; ++i) {
       allElements.push(el);
       // If the element has a shadow root, dig deeper.
@@ -138,17 +138,17 @@ async function crawl(browser, page, depth = 0) {
     console.log(`Loading: ${page.url}`);
 
     const newPage = await browser.newPage();
-    await newPage.goto(page.url, {waitUntil: 'networkidle2'});
+    await newPage.goto(page.url, { waitUntil: 'networkidle2' });
 
     let anchors = await newPage.evaluate(collectAllSameOriginAnchorsDeep);
     anchors = anchors.filter(a => a !== URL) // link doesn't point to start url of crawl.
 
     page.title = await newPage.evaluate('document.title');
-    page.children = anchors.map(url => ({url}));
+    page.children = anchors.map(url => ({ url }));
 
     if (SCREENSHOTS) {
-      const path = `./${OUT_DIR}/${slugify(page.url)}.png`;
-      let imgBuff = await newPage.screenshot({fullPage: false});
+      let path = `./${OUT_DIR}/${slugify(page.url)}.png`;
+      let imgBuff = await newPage.screenshot({ fullPage: false });
       imgBuff = await sharp(imgBuff).resize(null, 150).toBuffer(); // resize image to 150 x auto.
       util.promisify(fs.writeFile)(path, imgBuff); // async
       page.img = `data:img/png;base64,${imgBuff.toString('base64')}`;
@@ -166,40 +166,48 @@ async function crawl(browser, page, depth = 0) {
 }
 
 function buildSitemap(rootURL = "") {
-  if (SITEMAP && crawledPages) {    
-    let siteMap = createSitemap({hostname: rootURL});
+  if (SITEMAP && crawledPages) {
+    let siteMap = createSitemap({ hostname: rootURL });
     crawledPages.forEach(pg => {
-      siteMap.add({url: pg.url, title: pg.title})
+      try {
+        siteMap.add({ url: pg.url, title: pg.title })  
+      } catch (err) {
+        // bad url, don't add.
+      }
     });
 
     let path = `./${OUT_DIR}/sitemap.xml`;
-    fs.writeFile(path, siteMap.toString(true), function (err) {
-      if (err) throw err;      
-    });    
+    try {
+      fs.writeFile(path, siteMap.toString(true), function (err) {
+        if (err) throw err;
+      });
+    } catch (err) {      
+        throw err;      
+    }
   }
 }
 
-(async() => {
+(async () => {
 
-mkdirSync(OUT_DIR); // create output dir if it doesn't exist.
-await del([`${OUT_DIR}/*`]); // cleanup after last run.
+  mkdirSync(OUT_DIR); // create output dir if it doesn't exist.
+  await del([`${OUT_DIR}/*`]); // cleanup after last run.
 
-const browser = await puppeteer.launch();
-const page = await browser.newPage();
-if (VIEWPORT) {
-  await page.setViewport(VIEWPORT);
-}
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  if (VIEWPORT) {
+    await page.setViewport(VIEWPORT);
+  }
 
-const root = {url: URL};
-await crawl(browser, root);
+  const root = { url: URL };
+  await crawl(browser, root);
 
-if (SITEMAP) {
-  buildSitemap(); 
-}
+  if (SITEMAP) {
+    buildSitemap(URL);
+  }
 
-await util.promisify(fs.writeFile)(`./${OUT_DIR}/crawl.json`, JSON.stringify(root, null, ' '));
+  await util.promisify(fs.writeFile)(`./${OUT_DIR}/crawl.json`, JSON.stringify(root, null, ' '));
 
-await browser.close();
+  await browser.close();
 
 })();
 
