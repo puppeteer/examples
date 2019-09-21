@@ -29,6 +29,7 @@
     "request-promise-native": "^1.0.5",
     "resize-img": "^1.1.2",
     "sharp": "^0.20.1",
+    "sitemap": "^4.1.1",
     "ws": "^5.1.1",
     "yargs": "^11.0.0"
   }

@@ -19,12 +19,14 @@
  /**
   * Discovers all the pages in site or single page app (SPA) and creates
   * a tree of the result in ./output/<site slug/crawl.json. Optionally
-  * takes screenshots of each page as it is visited.
+  * takes screenshots of each page as it is visited. Also, optionally 
+  * builds a sitemap.xml of the visited pages.
   *
   * Usage:
   *   node crawlsite.js
   *   URL=https://yourspa.com node crawlsite.js
   *   URL=https://yourspa.com node crawlsite.js --screenshots
+  *   URL=https://yourspa.com node crawlsite.js --sitemap
   *
   * Then open the visualizer in a browser:
   *   http://localhost:8080/html/d3tree.html
@@ -46,6 +48,7 @@ const SCREENSHOTS = process.argv.includes('--screenshots');
 const DEPTH = parseInt(process.env.DEPTH) || 2;
 const VIEWPORT = SCREENSHOTS ? {width: 1028, height: 800, deviceScaleFactor: 2} : null;
 const SITEMAP = process.argv.includes('--sitemap');
+const { createSitemap } = require('sitemap');
 const OUT_DIR = process.env.OUTDIR || `output/${slugify(URL)}`;
 
 const crawledPages = new Map();
@@ -162,23 +165,15 @@ async function crawl(browser, page, depth = 0) {
   }
 }
 
-function buildSitemap() {
-  if (SITEMAP && crawledPages) {
-    var p = "";
-    crawledPages.forEach(element => {
-      var n = "\t\t<url>\n";
-      n = n + "\t\t\t<loc>\n";
-      n = n + `\t\t\t\t${element.url}\n`;
-      n = n + "\t\t\t</loc>\n";
-      n = n + "\t\t</url>\n";
+function buildSitemap(rootURL = "") {
+  if (SITEMAP && crawledPages) {    
+    let siteMap = createSitemap({hostname: rootURL});
+    crawledPages.forEach(pg => {
+      siteMap.add({url: pg.url, title: pg.title})
+    });
 
-      p = p + n;
-    });    
-    var sm = "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n";
-    sm = sm + "\t<urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>\n";
-    sm = sm + p + "\t</urlset>\n";
-    const path = `./${OUT_DIR}/sitemap.xml`;
-    fs.writeFile(path, sm, function (err) {
+    let path = `./${OUT_DIR}/sitemap.xml`;
+    fs.writeFile(path, siteMap.toString(true), function (err) {
       if (err) throw err;      
     });    
   }
