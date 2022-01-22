@@ -20,7 +20,7 @@
     "express": "^4.16.4",
     "lighthouse": "^4.0.0-alpha.2-3.2.1",
     "mime": "^2.4.0",
-    "node-fetch": "^2.3.0",
+    "node-fetch": "^3.1.1",
     "pixel-diff": "^1.0.1",
     "pngjs": "^3.3.3",
     "puppeteer": "^1.11.0",
