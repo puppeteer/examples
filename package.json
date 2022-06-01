@@ -28,7 +28,7 @@
     "request-promise": "^4.2.2",
     "request-promise-native": "^1.0.5",
     "resize-img": "^1.1.2",
-    "sharp": "^0.21.1",
+    "sharp": "^0.30.5",
     "ws": "^6.1.2",
     "yargs": "^12.0.5"
   }
