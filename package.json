@@ -17,7 +17,7 @@
     "chrome-launcher": "^0.10.5",
     "cli-table": "^0.3.1",
     "del": "^3.0.0",
-    "express": "^4.16.4",
+    "express": "^4.17.3",
     "lighthouse": "^4.0.0-alpha.2-3.2.1",
     "mime": "^2.4.0",
     "node-fetch": "^2.3.0",
