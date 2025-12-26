@@ -39,36 +39,47 @@ const puppeteer = require('puppeteer');
 const username = process.env.USERNAME || 'ebidel';
 const searchable = process.argv.includes('--searchable');
 
-(async() => {
+(async () => {
 
-const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch();
 
-const page = await browser.newPage();
-await page.setViewport({width: 1200, height: 800, deviceScaleFactor: 2});
-await page.goto(`https://twitter.com/${username}`);
+  const page = await browser.newPage();
+  await page.setViewport({
+    width: 1200,
+    height: 800,
+    deviceScaleFactor: 2
+  });
+  await page.goto(`https://twitter.com/${username}`, {
+    waitUntil: 'networkidle2'
+  });
 
-// Can't use elementHandle.click() because it clicks the center of the element
-// with the mouse. On tweets like https://twitter.com/ebidel/status/915996563234631680
-// there is an embedded card link to another tweet that it clicks.
-await page.$eval(`.tweet[data-screen-name="${username}"]`, tweet => tweet.click());
-await page.waitForSelector('.tweet.permalink-tweet', {visible: true});
 
-const overlay = await page.$('.tweet.permalink-tweet');
-const screenshot = await overlay.screenshot({path: 'tweet.png'});
+  // Can't use elementHandle.click() because it clicks the center of the element
+  // with the mouse. On tweets like https://twitter.com/ebidel/status/915996563234631680
+  // there is an embedded card link to another tweet that it clicks.
+  await page.$eval(`article`, tweet => tweet.click());
+  await page.waitForSelector('article', {
+    visible: true
+  });
 
-if (searchable) {
-  await page.evaluate(tweet => {
-    const width = getComputedStyle(tweet).width;
-    tweet = tweet.cloneNode(true);
-    tweet.style.width = width;
-    document.body.innerHTML = `
-      <div style="display:flex;justify-content:center;align-items:center;height:100vh;">;
+  const overlay = await page.$('article');
+  const screenshot = await overlay.screenshot({
+    path: 'tweet.png'
+  });
+
+  if (searchable) {
+    await page.evaluate(tweet => {
+      const width = getComputedStyle(tweet).width;
+      tweet = tweet.cloneNode(true);
+      tweet.style.width = width;
+      document.body.innerHTML = `
+      <div style="display:flex;justify-content:center;align-items:center;height:100vh;">
         ${tweet.outerHTML}
       </div>
     `;
-  }, overlay);
-} else {
-  await page.setContent(`
+    }, overlay);
+  } else {
+    await page.setContent(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -93,10 +104,14 @@ if (searchable) {
       </body>
     </html>
   `);
-}
+  }
 
-await page.pdf({path: 'tweet.pdf', printBackground: true});
+  //NOTE: page.pdf does not work with {headless: false}
+  await page.pdf({
+    path: 'tweet.pdf',
+    printBackground: true
+  });
 
-await browser.close();
+  await browser.close();
 
 })();
