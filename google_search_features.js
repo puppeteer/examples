@@ -96,7 +96,7 @@ const BlinkFeatureNameToCaniuseName = {
  * @param {string} propName Property name to filter on.
  * @return {!Array} unique array of items
  */
-function uniqueByProperty(items, propName) {
+function uniqueByProperty(items = [], propName) {
   const posts = Array.from(items.reduce((map, item) => {
     return map.set(item[propName], item);
   }, new Map()).values());
