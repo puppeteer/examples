@@ -62,6 +62,10 @@ Load 2 or more pages side-by-side to visually see the difference in page load. O
 
 <img width="500" alt="Side by side page load" src="https://user-images.githubusercontent.com/238208/39337122-167cc91e-4970-11e8-955c-2e1beeeef6fe.png">
 
+### [human_fallback.js](./human_fallback.js)
+
+When Puppeteer hits a blocker it can't handle (CAPTCHA, Cloudflare challenge, login wall), fall back to the [Human Pages](https://humanpages.ai) API to hire a real human to solve it, then resume automation.
+
 ### License
 
 [Apache 2.0](./LICENSE) © 2018 Google Inc.
