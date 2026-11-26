@@ -16,58 +16,63 @@
  * @author ebidel@ (Eric Bidelman)
  */
 
- /**
-  * Discovers all the pages in site or single page app (SPA) and creates
-  * a tree of the result in ./output/<site slug/crawl.json. Optionally
-  * takes screenshots of each page as it is visited.
-  *
-  * Usage:
-  *   node crawlsite.js
-  *   URL=https://yourspa.com node crawlsite.js
-  *   URL=https://yourspa.com node crawlsite.js --screenshots
-  *
-  * Then open the visualizer in a browser:
-  *   http://localhost:8080/html/d3tree.html
-  *   http://localhost:8080/html/d3tree.html?url=../output/https___yourspa.com/crawl.json
-  *
-  *Start Server:
-  *   node server.js
-  *
-  */
+/**
+ * Discovers all the pages in a site or single page app (SPA) and creates
+ * a tree of the result in ./output/<site slug>/crawl.json. Optionally
+ * takes screenshots of each page as it is visited.
+ *
+ * Usage:
+ *   node crawlsite.js
+ *   URL=https://yourspa.com node crawlsite.js
+ *   URL=https://yourspa.com node crawlsite.js --screenshots
+ *
+ * Then open the visualizer in a browser:
+ *   http://localhost:8080/html/d3tree.html
+ *   http://localhost:8080/html/d3tree.html?url=../output/https___yourspa.com/crawl.json
+ *
+ * Start Server:
+ *   node server.js
+ */
 
-const fs = require('fs');
-const del = require('del');
-const util = require('util');
-const puppeteer = require('puppeteer');
-const sharp = require('sharp');
+import {mkdir, rm, writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import puppeteer from 'puppeteer';
 
-const URL = process.env.URL || 'https://news.polymer-project.org/';
+const START_URL = process.env.URL || 'https://developer.chrome.com/';
 const SCREENSHOTS = process.argv.includes('--screenshots');
-const DEPTH = parseInt(process.env.DEPTH) || 2;
+const DEPTH = process.env.DEPTH !== undefined ? parseInt(process.env.DEPTH, 10) : 2;
 const VIEWPORT = SCREENSHOTS ? {width: 1028, height: 800, deviceScaleFactor: 2} : null;
-const OUT_DIR = process.env.OUTDIR || `output/${slugify(URL)}`;
+const OUT_DIR = process.env.OUTDIR || `output/${slugify(START_URL)}`;
 
 const crawledPages = new Map();
 const maxDepth = DEPTH; // Subpage depth to crawl site.
 
 function slugify(str) {
-  return str.replace(/[\/:]/g, '_');
+  return str.replace(/[/:]/g, '_');
 }
 
-function mkdirSync(dirPath) {
-  try {
-    dirPath.split('/').reduce((parentPath, dirName) => {
-      const currentPath = parentPath + dirName;
-      if (!fs.existsSync(currentPath)) {
-        fs.mkdirSync(currentPath);
-      }
-      return currentPath + '/';
-    }, '');
-  } catch (err) {
-    if (err.code !== 'EEXIST') {
-      throw err;
-    }
-  }
+/**
+ * Resizes a PNG buffer to the target height (preserving aspect ratio) using
+ * an in-browser canvas so no native image-processing dependency is required.
+ * @param {!Page} page
+ * @param {!Uint8Array} imgBuff
+ * @param {number} targetHeight
+ * @return {!Promise<!Buffer>}
+ */
+async function resizePng(page, imgBuff, targetHeight) {
+  const dataUrl = `data:image/png;base64,${Buffer.from(imgBuff).toString('base64')}`;
+  const resizedDataUrl = await page.evaluate(async (src, height) => {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    const width = Math.round((img.width / img.height) * height);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    return canvas.toDataURL('image/png');
+  }, dataUrl, targetHeight);
+  return Buffer.from(resizedDataUrl.split(',')[1], 'base64');
 }
 
 /**
@@ -79,8 +84,8 @@ function mkdirSync(dirPath) {
 function collectAllSameOriginAnchorsDeep(sameOrigin = true) {
   const allElements = [];
 
-  const findAllElements = function(nodes) {
-    for (let i = 0, el; el = nodes[i]; ++i) {
+  const findAllElements = nodes => {
+    for (const el of nodes) {
       allElements.push(el);
       // If the element has a shadow root, dig deeper.
       if (el.shadowRoot) {
@@ -96,7 +101,7 @@ function collectAllSameOriginAnchorsDeep(sameOrigin = true) {
     .filter(el => el.href !== location.href) // link doesn't point to page's own URL.
     .filter(el => {
       if (sameOrigin) {
-        return new URL(location).origin === new URL(el.href).origin;
+        return new URL(location.href).origin === new URL(el.href).origin;
       }
       return true;
     })
@@ -106,9 +111,9 @@ function collectAllSameOriginAnchorsDeep(sameOrigin = true) {
 }
 
 /**
- * Crawls a URL by visiting an url, then recursively visiting any child subpages.
+ * Crawls a URL by visiting a url, then recursively visiting any child subpages.
  * @param {!Browser} browser
- * @param {{url: string, title: string, img?: string, children: !Array<!Object>}} page Current page.
+ * @param {{url: string, title?: string, img?: string, children?: !Array<!Object>}} page Current page.
  * @param {number=} depth Current subtree depth of crawl.
  */
 async function crawl(browser, page, depth = 0) {
@@ -124,36 +129,39 @@ async function crawl(browser, page, depth = 0) {
     page.img = item.img;
     page.children = item.children;
     // Fill in the children with details (if they already exist).
-    page.children.forEach(c => {
-      const item = crawledPages.get(c.url);
-      c.title = item ? item.title : '';
-      c.img = item ? item.img : null;
-    });
-    return;
-  } else {
-    console.log(`Loading: ${page.url}`);
-
-    const newPage = await browser.newPage();
-    await newPage.goto(page.url, {waitUntil: 'networkidle2'});
-
-    let anchors = await newPage.evaluate(collectAllSameOriginAnchorsDeep);
-    anchors = anchors.filter(a => a !== URL) // link doesn't point to start url of crawl.
-
-    page.title = await newPage.evaluate('document.title');
-    page.children = anchors.map(url => ({url}));
-
-    if (SCREENSHOTS) {
-      const path = `./${OUT_DIR}/${slugify(page.url)}.png`;
-      let imgBuff = await newPage.screenshot({fullPage: false});
-      imgBuff = await sharp(imgBuff).resize(null, 150).toBuffer(); // resize image to 150 x auto.
-      util.promisify(fs.writeFile)(path, imgBuff); // async
-      page.img = `data:img/png;base64,${imgBuff.toString('base64')}`;
+    for (const c of page.children) {
+      const childItem = crawledPages.get(c.url);
+      c.title = childItem ? childItem.title : '';
+      c.img = childItem ? childItem.img : null;
     }
-
-    crawledPages.set(page.url, page); // cache it.
-
-    await newPage.close();
+    return;
   }
+
+  console.log(`Loading: ${page.url}`);
+
+  const newPage = await browser.newPage();
+  if (VIEWPORT) {
+    await newPage.setViewport(VIEWPORT);
+  }
+  await newPage.goto(page.url, {waitUntil: 'networkidle2'});
+
+  let anchors = await newPage.evaluate(collectAllSameOriginAnchorsDeep);
+  anchors = anchors.filter(a => a !== START_URL); // link doesn't point to start url of crawl.
+
+  page.title = await newPage.title();
+  page.children = anchors.map(url => ({url}));
+
+  if (SCREENSHOTS) {
+    const filePath = path.join(OUT_DIR, `${slugify(page.url)}.png`);
+    let imgBuff = await newPage.screenshot({fullPage: false});
+    imgBuff = await resizePng(newPage, imgBuff, 150); // resize image to 150px height x auto.
+    await writeFile(filePath, imgBuff);
+    page.img = `data:image/png;base64,${imgBuff.toString('base64')}`;
+  }
+
+  crawledPages.set(page.url, page); // cache it.
+
+  await newPage.close();
 
   // Crawl subpages.
   for (const childPage of page.children) {
@@ -161,23 +169,14 @@ async function crawl(browser, page, depth = 0) {
   }
 }
 
-(async() => {
-
-mkdirSync(OUT_DIR); // create output dir if it doesn't exist.
-await del([`${OUT_DIR}/*`]); // cleanup after last run.
+await rm(OUT_DIR, {recursive: true, force: true}); // cleanup after last run.
+await mkdir(OUT_DIR, {recursive: true}); // create output dir.
 
 const browser = await puppeteer.launch();
-const page = await browser.newPage();
-if (VIEWPORT) {
-  await page.setViewport(VIEWPORT);
-}
 
-const root = {url: URL};
+const root = {url: START_URL};
 await crawl(browser, root);
 
-await util.promisify(fs.writeFile)(`./${OUT_DIR}/crawl.json`, JSON.stringify(root, null, ' '));
+await writeFile(path.join(OUT_DIR, 'crawl.json'), JSON.stringify(root, null, ' '));
 
 await browser.close();
-
-})();
-

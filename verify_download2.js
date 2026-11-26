@@ -20,32 +20,28 @@
  * Note: this approach only works in headful Chrome.
  * Another approach to verifying a file gets downloaded. Shows how to click a
  * file download link and verify that the file gets downloaded in the
- * chrome:downloads page.
+ * chrome://downloads page.
  *
- * Install:
- *   npm i puppeteer
  * Run:
  *   node verify_download2.js
  */
 
-const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import fs from 'node:fs';
+import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
+import puppeteer from 'puppeteer';
 
-const DOWNLOADS_FOLDER = `${os.homedir()}/Downloads`;
+const DOWNLOADS_FOLDER = path.join(os.homedir(), 'Downloads');
+const FILENAME = `puppeteer-example-${Date.now()}.csv`;
 
 /**
- * From @xprudhomme.
  * Check if file exists, watching containing directory meanwhile.
- * Resolve if the file exists, or if the file is created before the timeout
- * occurs.
  * @param {string} filePath
- * @param {integer} timeout
- * @returns {!Promise<undefined>} Resolves when file has been created. Rejects
- *     if timout is reached.
+ * @param {number=} timeout
+ * @returns {!Promise<boolean>}
  */
-function checkFileExists(filePath, timeout=15000) {
+function checkFileExists(filePath, timeout = 15000) {
   return new Promise((resolve, reject) => {
     const dir = path.dirname(filePath);
     const basename = path.basename(filePath);
@@ -54,20 +50,20 @@ function checkFileExists(filePath, timeout=15000) {
       if (eventType === 'rename' && filename === basename) {
         clearTimeout(timer);
         watcher.close();
-        resolve();
+        resolve(true);
       }
     });
 
     const timer = setTimeout(() => {
       watcher.close();
-      reject(new Error(' [checkFileExists] File does not exist, and was not created during the timeout delay.'));
+      reject(new Error('[checkFileExists] File does not exist, and was not created during the timeout delay.'));
     }, timeout);
 
-    fs.access(filePath, fs.constants.R_OK, err =>  {
+    fs.access(filePath, fs.constants.R_OK, err => {
       if (!err) {
         clearTimeout(timer);
         watcher.close();
-        resolve();
+        resolve(true);
       }
     });
   });
@@ -80,89 +76,65 @@ function checkFileExists(filePath, timeout=15000) {
  */
 async function waitForFileToDownload(browser, url) {
   const downloadPage = await browser.newPage();
-  // Note: navigating to this page only works in headful chrome.
+  // Note: navigating to this page only works in headful Chrome.
   await downloadPage.goto('chrome://downloads/');
 
   // Wait for our download to show up in the list by matching on its url.
   const jsHandle = await downloadPage.waitForFunction(downloadUrl => {
     const manager = document.querySelector('downloads-manager');
-    const downloads = manager.items_.length;
-    const lastDownload = manager.items_[0];
-    if (downloads && lastDownload.url === downloadUrl &&
-        lastDownload.state === 'COMPLETE') {
-      return manager.items_[0];
+    const items = manager?.items_ || [];
+    const match = items.find(item => {
+      const itemUrl = typeof item.url === 'string' ? item.url : item.url?.url;
+      const isComplete = item.state === 2 || item.state === 'COMPLETE';
+      return itemUrl === downloadUrl && isComplete;
+    });
+    if (match) {
+      return {
+        fileName: match.fileName || match.file_name,
+        filePath: match.filePath || match.file_path,
+      };
     }
+    return null;
   }, {polling: 100}, url);
 
   const fileMeta = await jsHandle.jsonValue();
-
   await downloadPage.close();
 
   return fileMeta;
 }
 
-/**
- * @param {!Browser} browser
- * @param {string} url The url of the page to navigate to.
- * @param {string} text The link with this text to find and click on the page.
- * @returns {!Promise<?string>} The download resource's url.
- */
-async function clickDownloadLink(browser, url, text) {
-  const page = await browser.newPage();
-  await page.goto(url, {waitUntil: 'networkidle2'});
-
-  const downloadUrl = await page.evaluate((text) => {
-    const link = document.evaluate(`//a[text()="${text}"]`, document,
-        null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-    if (link) {
-      link.click();
-      return link.href;
-    }
-    return null;
-  }, text);
-
-  await page.close();
-
-  return downloadUrl;
-}
-
-(async() => {
-
-const browser = await puppeteer.launch({
-  headless: false,
-  // dumpio: true,
+// Start a local test server that serves a downloadable CSV file.
+const server = http.createServer((req, res) => {
+  if (req.url === `/${FILENAME}`) {
+    res.writeHead(200, {
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="${FILENAME}"`,
+    });
+    res.end('name,value\npuppeteer,1\n');
+    return;
+  }
+  res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+  res.end(`<a id="download" href="/${FILENAME}" download="${FILENAME}">Download CSV</a>`);
 });
 
-// TODO: setDownloadBehavior would be a good approach, as we could check
-// that the file shows up in the location specified by downloadPath. However,
-// that arg doesn't currently work.
-// const client = await page.target().createCDPSession();
-// await client.send('Page.setDownloadBehavior', {
-//   behavior: 'allow',
-//   downloadPath: path.resolve(__dirname, 'downloads'),
-// });
+await new Promise(resolve => server.listen(0, resolve));
+const {port} = server.address();
+const downloadUrl = `http://localhost:${port}/${FILENAME}`;
 
-// await client.detach();
+const browser = await puppeteer.launch({headless: false});
 
-// 1. navigate to a page with a bunch links to download.
-// 2. click the "Short Selling (csv)" link on the page. The browser force downloads the file.
-const url = 'https://www.nseindia.com/products/content/equities/equities/homepage_eq.htm';
-const downloadUrl = await clickDownloadLink(browser, url, 'Short Selling (csv)');
+const page = await browser.newPage();
+await page.goto(`http://localhost:${port}/`);
+await page.click('#download');
 
-if (!downloadUrl) {
-  console.error('Did not find download link!');
-  return;
-}
-
-// 3. Open chrome:downloads and wait for the file to be downloaded.
+// Open chrome://downloads and wait for the file to finish downloading.
 const fileMeta = await waitForFileToDownload(browser, downloadUrl);
-console.log(`"${fileMeta.file_name}" was downloaded`);
+console.log(`"${fileMeta.fileName}" was downloaded`);
 
-// 4. Optionally check that the file really ends up in the expected location
-//    on the filesystem.
-const exists = await checkFileExists(`${DOWNLOADS_FOLDER}/${fileMeta.file_name}`);
-console.assert(exists, `${fileMeta.file_name} was not downloaded to correct location.`);
+// Verify the file exists in the expected location on the filesystem.
+const targetPath = fileMeta.filePath || path.join(DOWNLOADS_FOLDER, fileMeta.fileName);
+const exists = await checkFileExists(targetPath);
+console.assert(exists, `${fileMeta.fileName} was not downloaded to correct location.`);
 
 await browser.close();
-
-})();
+server.close();

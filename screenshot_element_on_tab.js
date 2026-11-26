@@ -20,13 +20,12 @@
  * Takes screenshots of DOM elements as you tab through the page.
  */
 
-const puppeteer = require('puppeteer');
+import {setTimeout} from 'node:timers/promises';
+import puppeteer from 'puppeteer';
 
-const AUTO_TAB = !false; // If true, tabbing through elements is done automatically.
+const AUTO_TAB = true; // If true, tabbing through elements is done automatically.
 const padding = 25; // padding around the element screenshot.
-const url = process.env.URL || 'https://perf-sandbox.appspot.com/';
-
-(async() => {
+const url = process.env.URL || 'https://developer.chrome.com/';
 
 let screenshotNum = 1;
 
@@ -36,17 +35,23 @@ await page.setViewport({width: 1200, height: 800, deviceScaleFactor: 2});
 
 await page.exposeFunction('onTabToElement', async selector => {
   const el = await page.$(selector);
-  console.log(`Taking screenshot of ${selector}`);
+  if (!el) {
+    return;
+  }
   const boundingBox = await el.boundingBox();
+  if (!boundingBox) {
+    return;
+  }
 
-  await el.screenshot({
+  console.log(`Taking screenshot of ${selector}`);
+  await page.screenshot({
     path: `screenshot_${screenshotNum++}.png`,
     clip: {
-      x: boundingBox.x - padding,
-      y: boundingBox.y - padding,
+      x: Math.max(0, boundingBox.x - padding),
+      y: Math.max(0, boundingBox.y - padding),
       width: boundingBox.width + padding * 2,
       height: boundingBox.height + padding * 2,
-    }
+    },
   });
 });
 
@@ -54,8 +59,9 @@ await page.evaluateOnNewDocument(() => {
   window.addEventListener('keyup', e => {
     if (e.key === 'Tab') {
       const active = document.activeElement;
-      const selector = active.getAttribute('id') ? `#${active.id}` :
-          `${active.localName}.${active.className.replace(/\s/g, '.')}`;
+      const selector = active.id
+        ? `#${active.id}`
+        : `${active.localName}.${active.className.trim().replace(/\s+/g, '.')}`;
       window.onTabToElement(selector);
     }
   });
@@ -64,18 +70,12 @@ await page.evaluateOnNewDocument(() => {
 await page.goto(url);
 
 if (AUTO_TAB) {
-  await page.keyboard.press('Tab');
-  await page.waitFor(1000);
-  await page.keyboard.press('Tab');
-  await page.waitFor(1000);
-  await page.keyboard.press('Tab');
-  await page.waitFor(1000);
-  await page.keyboard.press('Tab');
-  await page.waitFor(1000);
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Tab');
+    await setTimeout(1000);
+  }
 
   await browser.close();
 }
 
-// If not in AUTO_TAB mode, close the browser when you're down with ctrl+c.
-
-})();
+// If not in AUTO_TAB mode, close the browser when you're done with ctrl+c.
