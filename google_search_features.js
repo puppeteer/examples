@@ -18,19 +18,16 @@
 
 /**
  * Prints a non-exhaustive list of HTML/JS/CSS features a page is using which
- * are not supported by the Google Search bot and "Render as Google"
- * (runs Chrome 41). See developers.google.com/search/docs/guides/rendering.
+ * are not supported by a target Chrome version (originally Google Search bot's
+ * Chrome 41). See https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics.
  */
 
-const fs = require('fs');
-const puppeteer = require('puppeteer');
-const fetch = require('node-fetch');
-const chalk = require('chalk');
-const caniuseDB = require('caniuse-db/data.json').data;
+import {setTimeout} from 'node:timers/promises';
+import {styleText} from 'node:util';
+import puppeteer from 'puppeteer';
 
-const url = process.env.URL || 'https://www.chromestatus.com/features';
-
-const GOOGLE_SEARCH_CHROME_VERSION = process.env.CHROME_VERSION || 41;
+const url = process.env.URL || 'https://chromestatus.com/roadmap';
+const GOOGLE_SEARCH_CHROME_VERSION = process.env.CHROME_VERSION || '41';
 
 const BlinkFeatureNameToCaniuseName = {
   AddEventListenerPassiveTrue: 'passive-event-listener',
@@ -65,19 +62,16 @@ const BlinkFeatureNameToCaniuseName = {
   LinkRelModulePreload: 'es6-module',
   V8BroadcastChannel_Constructor: 'broadcastchannel',
   Fetch: 'fetch',
-  GlobalCacheStorage: 'cachestorage', // missing: https://github.com/Fyrd/caniuse/issues/3122
+  GlobalCacheStorage: 'cachestorage',
   OffMainThreadFetch: 'fetch',
   IntersectionObserver_Constructor: 'intersectionobserver',
   V8Window_RequestIdleCallback_Method: 'requestidlecallback',
   NotificationPermission: 'notifications',
   UnprefixedPerformanceTimeline: 'user-timing',
   V8Element_GetBoundingClientRect_Method: 'getboundingclientrect',
-  AddEventListenerThirdArgumentIsObject: 'once-event-listener', // TODO: not a perfect match.
-  // TODO: appears to be no UMA tracking for classes, async/await, spread, and
-  // other newer js features. Those aren't being caught here.
+  AddEventListenerThirdArgumentIsObject: 'once-event-listener',
   contain: 'css-containment',
   'tab-size': 'css3-tabsize',
-  // Explicitly disabled by search https://developers.google.com/search/docs/guides/rendering
   UnprefixedIndexedDB: 'indexeddb',
   DocumentCreateEventWebGLContextEvent: 'webgl',
   CSSGridLayout: 'css-grid',
@@ -86,8 +80,6 @@ const BlinkFeatureNameToCaniuseName = {
   WorkerStart: 'webworkers',
   ServiceWorkerControlledPage: 'serviceworkers',
   PrepareModuleScript: 'es6-module',
-  // CookieGet:
-  // CookieSet
 };
 
 /**
@@ -96,57 +88,67 @@ const BlinkFeatureNameToCaniuseName = {
  * @param {string} propName Property name to filter on.
  * @return {!Array} unique array of items
  */
-function uniqueByProperty(items, propName) {
-  const posts = Array.from(items.reduce((map, item) => {
-    return map.set(item[propName], item);
-  }, new Map()).values());
-  return posts;
+function uniqueByProperty(items = [], propName) {
+  return Array.from(
+    items.reduce((map, item) => map.set(item[propName], item), new Map()).values()
+  );
 }
 
 /**
- * Sorts array of features by their name
- * @param {!Object} a
- * @param {!Object} b
+ * Sorts array of features by their name.
  */
 function sortByName(a, b) {
-  if (a.name < b.name) {
-    return -1;
-  }
-  if (a.name > b.name) {
-    return 1;
-  }
-  return 0;
+  return String(a.name).localeCompare(String(b.name));
 }
 
 function printHeader(usage) {
   console.log('');
-  console.log(`${chalk.bold(chalk.yellow('CAREFUL'))}: using ${usage.FeatureFirstUsed.length} HTML/JS, ${usage.CSSFirstUsed.length} CSS features. Some features are ${chalk.underline('not')} supported by the Google Search crawler.`);
-  console.log(`The bot runs ${chalk.redBright('Chrome ' + GOOGLE_SEARCH_CHROME_VERSION)}, which may not render your page correctly when it's being indexed.`);
+  console.log(
+    `${styleText(['bold', 'yellow'], 'CAREFUL')}: using ${usage.FeatureFirstUsed.length} HTML/JS, ` +
+    `${usage.CSSFirstUsed.length} CSS features. Some features are ${styleText('underline', 'not')} ` +
+    `supported by Chrome ${GOOGLE_SEARCH_CHROME_VERSION}.`
+  );
+  console.log(
+    `Target version: ${styleText('redBright', `Chrome ${GOOGLE_SEARCH_CHROME_VERSION}`)}.`
+  );
   console.log('');
-  console.log(chalk.dim('More info at https://developers.google.com/search/docs/guides/rendering.'));
+  console.log(styleText('dim', 'More info at https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics.'));
   console.log('');
-  console.log(`Features used which are not supported by Google Search:`);
+  console.log(`Features used which are not supported by Chrome ${GOOGLE_SEARCH_CHROME_VERSION}:`);
   console.log('');
 }
 
 /**
- * Returns true if `feature` is supported by the Google Search bot.
- * @param {string} feature caniuse.com feature name/id.
- * @return {boolean} True if the feature is (likely) supported by Google Search.
+ * Fetches caniuse database directly from GitHub (no npm dependency needed).
+ * @return {!Promise<!Object>}
  */
-function supportedByGoogleSearch(feature) {
+async function fetchCaniuseDB() {
+  const resp = await fetch('https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json');
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch caniuse data: ${resp.status}`);
+  }
+  const {data} = await resp.json();
+  return data;
+}
+
+/**
+ * Returns true if `feature` is supported by the target Chrome version.
+ * @param {!Object} caniuseDB
+ * @param {string} feature caniuse.com feature name/id.
+ * @return {?boolean}
+ */
+function isSupportedInChrome(caniuseDB, feature) {
   const data = caniuseDB[feature];
   if (!data) {
     return null;
   }
   const support = data.stats.chrome[GOOGLE_SEARCH_CHROME_VERSION];
-  return support === 'y'; // TODO: consider 'p'. Partial support / polyfill.
+  return support === 'y';
 }
 
 /**
  * Fetches HTML/JS feature id/names from chromestatus.com.
- * @param {!Browser} browser
- * @return {!Map<number, string>} key/val pairs of ids -> feature name
+ * @return {!Promise<!Map<number, string>>}
  */
 async function fetchFeatureToNameMapping() {
   const resp = await fetch('https://www.chromestatus.com/data/blink/features');
@@ -154,11 +156,10 @@ async function fetchFeatureToNameMapping() {
 }
 
 /**
- * Fetches CSS property id/names from chromestatus.com
- * @param {!Browser} browser
- * @return {!Map<number, string>} key/val pairs of ids -> feature name
+ * Fetches CSS property id/names from chromestatus.com.
+ * @return {!Promise<!Map<number, string>>}
  */
-async function fetchCSSFeatureToNameMapping(browser) {
+async function fetchCSSFeatureToNameMapping() {
   const resp = await fetch('https://www.chromestatus.com/data/blink/cssprops');
   return new Map(await resp.json());
 }
@@ -166,41 +167,36 @@ async function fetchCSSFeatureToNameMapping(browser) {
 /**
  * Start a trace during load to capture web platform features used by the page.
  * @param {!Browser} browser
- * @return {!Object}
+ * @return {!Promise<!Array<!Object>>}
  */
 async function collectFeatureTraceEvents(browser) {
   const page = await browser.newPage();
 
-  console.log(chalk.cyan(`Trace started.`));
+  console.log(styleText('cyan', 'Trace started.'));
 
   await page.tracing.start({
     categories: [
       '-*',
       'disabled-by-default-devtools.timeline', // for TracingStartedInPage
-      'disabled-by-default-blink.feature_usage'
+      'disabled-by-default-blink.feature_usage',
     ],
   });
-  console.log(chalk.cyan(`Navigating to ${url}`));
+  console.log(styleText('cyan', `Navigating to ${url}`));
   await page.goto(url, {waitUntil: 'networkidle2'});
-  console.log(chalk.cyan(`Waiting for page to be idle...`));
-  await page.waitFor(5000); // add a little more time in case other features are used.
-  const trace = JSON.parse(await page.tracing.stop());
-  console.log(chalk.cyan(`Trace complete.`));
+  console.log(styleText('cyan', 'Waiting for page to be idle...'));
+  await setTimeout(5000); // add a little more time in case other features are used.
+  const traceBuffer = await page.tracing.stop();
+  const trace = JSON.parse(new TextDecoder().decode(traceBuffer));
+  console.log(styleText('cyan', 'Trace complete.'));
 
   // Filter out all trace events that aren't 1. blink feature usage
   // and 2. from the same process/thread id as our test page's main thread.
   const traceStartEvent = findTraceStartEvent(trace.traceEvents);
-  const events = trace.traceEvents.filter(e => {
-    return e.cat === 'disabled-by-default-blink.feature_usage' &&
-           e.pid === traceStartEvent.pid && e.tid === traceStartEvent.tid;
-  });
-
-  // // Gut check.
-  // console.assert(events.every((entry, i, arr) => {
-  //   // const nextIdx = Math.min(i + 1, arr.length - 1);
-  //   // return entry.pid === arr[nextIdx].pid && entry.tid === arr[nextIdx].tid;
-  //   return entry.pid === traceStartEvent.pid && entry.tid === traceStartEvent.tid;
-  // }), 'Trace event is not from the same process/thread id as the page being tested.');
+  const events = trace.traceEvents.filter(e =>
+    e.cat === 'disabled-by-default-blink.feature_usage' &&
+    e.pid === traceStartEvent?.pid &&
+    e.tid === traceStartEvent?.tid
+  );
 
   await page.close();
 
@@ -208,72 +204,73 @@ async function collectFeatureTraceEvents(browser) {
 }
 
 /**
- * @param {Array} events
- * @return {Object}
+ * @param {!Array<!Object>} events
+ * @return {?{pid: number, tid: number}}
  */
 function findTraceStartEvent(events) {
   const startedInBrowserEvt = events.find(e => e.name === 'TracingStartedInBrowser');
-  if (startedInBrowserEvt && startedInBrowserEvt.args.data && startedInBrowserEvt.args.data.frames) {
+  if (startedInBrowserEvt?.args?.data?.frames) {
     const mainFrame = startedInBrowserEvt.args.data.frames.find(frame => !frame.parent);
-    const pid = mainFrame && mainFrame.processId;
-    const threadNameEvt = events.find(e => e.pid === pid && e.ph === 'M' &&
-      e.cat === '__metadata' && e.name === 'thread_name' && e.args.name === 'CrRendererMain');
+    const pid = mainFrame?.processId;
+    const threadNameEvt = events.find(e =>
+      e.pid === pid &&
+      e.ph === 'M' &&
+      e.cat === '__metadata' &&
+      e.name === 'thread_name' &&
+      e.args.name === 'CrRendererMain'
+    );
 
-    const tid = threadNameEvt && threadNameEvt.tid;
+    const tid = threadNameEvt?.tid;
     if (pid && tid) {
-      return {
-        pid,
-        tid
-      };
+      return {pid, tid};
     }
   }
 
-  // // Support legacy browser versions
+  // Support legacy browser versions.
   const startedInPageEvt = events.find(e => e.name === 'TracingStartedInPage');
-  if (startedInPageEvt && startedInPageEvt.args && startedInPageEvt.args.data) {
+  if (startedInPageEvt?.args?.data) {
     return {
       pid: startedInPageEvt.pid,
-      tid: startedInPageEvt.tid
+      tid: startedInPageEvt.tid,
     };
   }
+  return null;
 }
 
 /**
  * @param {!Object} feature
+ * @param {?string=} featureUrl
  */
-function printFeatureName(feature, url= null) {
-  const suffix = url ? `: ${url}` : '';
+function printFeatureName(feature, featureUrl = null) {
+  const suffix = featureUrl ? `: ${featureUrl}` : '';
   if (feature.css) {
-    console.log(chalk.grey('-'), `CSS \`${feature.name}\`${suffix}`);
+    console.log(styleText('gray', '-'), `CSS \`${feature.name}\`${suffix}`);
   } else {
-    console.log(chalk.grey('-'), `${feature.name}${suffix}`);
+    console.log(styleText('gray', '-'), `${feature.name}${suffix}`);
   }
 }
 
-(async() => {
+const browser = await puppeteer.launch();
 
-const browser = await puppeteer.launch({
-  // headless: false,
-});
-
-// Parallelize the separate page loads.
-const [featureMap, cssFeatureMap, traceEvents] = await Promise.all([
+// Parallelize the separate fetches and trace collection.
+const [caniuseDB, featureMap, cssFeatureMap, traceEvents] = await Promise.all([
+  fetchCaniuseDB(),
   fetchFeatureToNameMapping(),
   fetchCSSFeatureToNameMapping(),
   collectFeatureTraceEvents(browser),
 ]);
 
-const usage = traceEvents.reduce((usage, e) => {
-  if (!(e.name in usage)) {
-    usage[e.name] = [];
+const usage = traceEvents.reduce((acc, e) => {
+  if (!(e.name in acc)) {
+    acc[e.name] = [];
   }
   const isCSS = e.name === 'CSSFirstUsed';
   const id = e.args.feature;
-  const name = isCSS ? cssFeatureMap.get(id) : featureMap.get(id);
-  usage[e.name].push({id, name, ts: e.ts, css: isCSS});
+  const name = (isCSS ? cssFeatureMap.get(id) : featureMap.get(id)) || `Feature #${id}`;
+  acc[e.name].push({id, name, ts: e.ts, css: isCSS});
 
-  return usage;
-}, {});
+  return acc;
+}, {FeatureFirstUsed: [], CSSFirstUsed: []});
 
 // Unique events based on feature property id.
 usage.FeatureFirstUsed = uniqueByProperty(usage.FeatureFirstUsed, 'id');
@@ -281,23 +278,21 @@ usage.CSSFirstUsed = uniqueByProperty(usage.CSSFirstUsed, 'id');
 
 printHeader(usage);
 
-const allFeaturesUsed = Object.entries([...usage.FeatureFirstUsed, ...usage.CSSFirstUsed].sort(sortByName));
-for (const [id, feature] of allFeaturesUsed) {
+const allFeaturesUsed = [...usage.FeatureFirstUsed, ...usage.CSSFirstUsed].sort(sortByName);
+for (const feature of allFeaturesUsed) {
   const caniuseName = BlinkFeatureNameToCaniuseName[feature.name];
-  const supported = supportedByGoogleSearch(caniuseName);
+  const supported = isSupportedInChrome(caniuseDB, caniuseName);
   if (caniuseName && !supported) {
-    const url = chalk.magentaBright(`https://caniuse.com/#feat=${caniuseName}`);
-    printFeatureName(feature, url);
+    const featUrl = styleText('magentaBright', `https://caniuse.com/#feat=${caniuseName}`);
+    printFeatureName(feature, featUrl);
   }
 }
 console.log('');
 console.log('All features used on the page:');
 console.log('');
-for (const [id, feature] of allFeaturesUsed) {
+for (const feature of allFeaturesUsed) {
   printFeatureName(feature);
 }
 console.log('');
 
 await browser.close();
-
-})();

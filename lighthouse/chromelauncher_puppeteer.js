@@ -18,41 +18,37 @@
 
 /**
  * How to:
- * 1. Use chrome-launcher module to launch chrome
+ * 1. Use chrome-launcher to launch Chrome.
  * 2. Connect to that browser instance using Puppeteer.
  * 3. Run Lighthouse on the page.
  */
 
-const chromeLauncher = require('chrome-launcher');
-const puppeteer = require('puppeteer');
-const lighthouse = require('lighthouse');
-const request = require('request');
-const util = require('util');
+import * as chromeLauncher from 'chrome-launcher';
+import lighthouse from 'lighthouse';
+import puppeteer from 'puppeteer';
 
-(async() => {
-
-const URL = 'https://www.chromestatus.com/features';
+const URL = process.env.URL || 'https://chromestatus.com/roadmap';
 
 const opts = {
-  chromeFlags: ['--headless'],
+  chromeFlags: ['--headless=new'],
   logLevel: 'info',
-  output: 'json'
+  output: 'json',
 };
 
-// Launch chrome using chrome-launcher.
+// Launch Chrome using chrome-launcher.
 const chrome = await chromeLauncher.launch(opts);
 opts.port = chrome.port;
 
 // Connect to it using puppeteer.connect().
-const resp = await util.promisify(request)(`http://localhost:${opts.port}/json/version`);
-const {webSocketDebuggerUrl} = JSON.parse(resp.body);
+const resp = await fetch(`http://localhost:${opts.port}/json/version`);
+const {webSocketDebuggerUrl} = await resp.json();
 const browser = await puppeteer.connect({browserWSEndpoint: webSocketDebuggerUrl});
 
 // Run Lighthouse.
-const {lhr} = await lighthouse(URL, opts, null);
-console.log(`Lighthouse scores: ${Object.values(lhr.categories).map(c => `${c.title} ${c.score}`).join(', ')}`);
+const {lhr} = await lighthouse(URL, opts);
+console.log(
+  `Lighthouse scores: ${Object.values(lhr.categories).map(c => `${c.title} ${c.score}`).join(', ')}`
+);
 
 await browser.disconnect();
 await chrome.kill();
-
-})();

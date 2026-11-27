@@ -21,17 +21,14 @@
  * different points of time during loading. Great for determining if a lazy loading strategy
  * is paying off or working correctly.
  *
- * Install:
- *   npm i puppeteer chalk cli-table
  * Run:
  *   URL=https://example.com node code_coverage.js
  */
 
-const puppeteer = require('puppeteer');
-const chalk = require('chalk');
-const Table = require('cli-table');
+import {stripVTControlCharacters, styleText} from 'node:util';
+import puppeteer from 'puppeteer';
 
-const URL = process.env.URL || 'https://www.chromestatus.com/features';
+const URL = process.env.URL || 'https://chromestatus.com/roadmap';
 
 const EVENTS = [
   'domcontentloaded',
@@ -48,49 +45,70 @@ function formatBytesToKB(bytes) {
   return `${bytes} bytes`;
 }
 
+function formatTable(headers, rows) {
+  const allRows = [headers, ...rows].map(row => row.map(String));
+  const widths = headers.map((_, col) =>
+    Math.max(...allRows.map(row => stripVTControlCharacters(row[col]).length))
+  );
+  const pad = (str, width) => str + ' '.repeat(width - stripVTControlCharacters(str).length);
+  const border = (left, mid, right) =>
+    styleText('gray', left + widths.map(w => '─'.repeat(w + 2)).join(mid) + right);
+  const formatRow = row =>
+    styleText('gray', '│') +
+    row.map((cell, i) => ` ${pad(cell, widths[i])} `).join(styleText('gray', '│')) +
+    styleText('gray', '│');
+
+  return [
+    border('┌', '┬', '┐'),
+    formatRow(headers.map(h => styleText('white', h))),
+    border('├', '┼', '┤'),
+    ...rows.map(row => formatRow(row.map(String))),
+    border('└', '┴', '┘'),
+  ].join('\n');
+}
+
 class UsageFormatter {
   constructor(stats) {
     this.stats = stats;
   }
 
   static eventLabel(event) {
-    // const maxEventLabelLen = EVENTS.reduce((currMax, event) => Math.max(currMax, event.length), 0);
-    // const eventLabel = event + ' '.repeat(maxEventLabelLen - event.length);
-    return chalk.magenta(event);
+    return styleText('magenta', event);
   }
 
   summary(used = this.stats.usedBytes, total = this.stats.totalBytes) {
-    const percent = Math.round((used / total) * 100);
+    const percent = total ? Math.round((used / total) * 100) : 0;
     return `${formatBytesToKB(used)}/${formatBytesToKB(total)} (${percent}%)`;
   }
 
   shortSummary(used, total = this.stats.totalBytes) {
-    const percent = Math.round((used / total) * 100);
+    const percent = total ? Math.round((used / total) * 100) : 0;
     return used ? `${formatBytesToKB(used)} (${percent}%)` : 0;
   }
 
   /**
-   * Constructors a bar chart for the % usage of each value.
+   * Constructs a bar chart for the % usage of each value.
    * @param {!{jsUsed: number, cssUsed: number, totalBytes: number}=} stats Usage stats.
    * @return {string}
    */
   barGraph(stats = this.stats) {
-    // const MAX_TERMINAL_CHARS = process.stdout.columns;
     const maxBarWidth = 30;
+    const jsLen = stats.totalBytes ? Math.round((stats.jsUsed / stats.totalBytes) * maxBarWidth) : 0;
+    const cssLen = stats.totalBytes ? Math.round((stats.cssUsed / stats.totalBytes) * maxBarWidth) : 0;
+    const unusedLen = Math.max(0, maxBarWidth - jsLen - cssLen);
 
-    const jsSegment = ' '.repeat((stats.jsUsed / stats.totalBytes) * maxBarWidth);
-    const cssSegment = ' '.repeat((stats.cssUsed / stats.totalBytes) * maxBarWidth);
-    const unusedSegment = ' '.repeat(maxBarWidth - jsSegment.length - cssSegment.length);
-
-    return chalk.bgRedBright(jsSegment) + chalk.bgBlueBright(cssSegment) +
-           chalk.bgBlackBright(unusedSegment);
+    return (
+      styleText('bgRedBright', ' '.repeat(jsLen)) +
+      styleText('bgBlueBright', ' '.repeat(cssLen)) +
+      styleText('bgGray', ' '.repeat(unusedLen))
+    );
   }
 }
 
 const stats = new Map();
 
 /**
- * @param {!Object} coverage
+ * @param {!Array<!Object>} coverage
  * @param {string} type Either "css" or "js" to indicate which type of coverage.
  * @param {string} eventType The page event when the coverage was captured.
  */
@@ -110,7 +128,7 @@ function addUsage(coverage, type, eventType) {
         get usedBytes() { return this.cssUsed + this.jsUsed; },
         totalBytes: 0,
         get percentUsed() {
-          return this.totalBytes ? Math.round(this.usedBytes / this.totalBytes * 100) : 0;
+          return this.totalBytes ? Math.round((this.usedBytes / this.totalBytes) * 100) : 0;
         },
         eventType,
         url: entry.url,
@@ -127,30 +145,25 @@ function addUsage(coverage, type, eventType) {
 }
 
 async function collectCoverage() {
-  const browser = await puppeteer.launch({headless: true});
+  const browser = await puppeteer.launch();
 
   // Do separate load for each event. See
-  // https://github.com/GoogleChrome/puppeteer/issues/1887
+  // https://github.com/puppeteer/puppeteer/issues/1887
   const collectPromises = EVENTS.map(async event => {
     console.log(`Collecting coverage @ ${UsageFormatter.eventLabel(event)}...`);
 
     const page = await browser.newPage();
 
-    // page.on('response', async response => {
-    //   console.log(response.request().url(), (await response.text()).length);
-    // });
-
     await Promise.all([
       page.coverage.startJSCoverage(),
-      page.coverage.startCSSCoverage()
+      page.coverage.startCSSCoverage(),
     ]);
 
     await page.goto(URL, {waitUntil: event});
-    // await page.waitForNavigation({waitUntil: event});
 
     const [jsCoverage, cssCoverage] = await Promise.all([
       page.coverage.stopJSCoverage(),
-      page.coverage.stopCSSCoverage()
+      page.coverage.stopCSSCoverage(),
     ]);
 
     addUsage(cssCoverage, 'css', event);
@@ -160,76 +173,62 @@ async function collectCoverage() {
   });
 
   await Promise.all(collectPromises);
-
-  return browser.close();
+  await browser.close();
 }
-
-(async() => {
 
 await collectCoverage();
 
 for (const [url, vals] of stats) {
-  console.log('\n' + chalk.cyan(url));
+  console.log('\n' + styleText('cyan', url));
 
-  const table = new Table({
-    // chars: {mid: '', 'left-mid': '', 'mid-mid': '', 'right-mid': ''},
-    head: [
-      'Event',
-      `${chalk.bgRedBright(' JS ')} ${chalk.bgBlueBright(' CSS ')} % used`,
-      'JS used',
-      'CSS used',
-      'Total bytes used'
-    ],
-    // style : {compact : true, 'padding-left' : 0}
-    style: {head: ['white'], border: ['grey']}
-    // colWidths: [20, 20]
-  });
+  const headers = [
+    'Event',
+    `${styleText('bgRedBright', ' JS ')} ${styleText('bgBlueBright', ' CSS ')} % used`,
+    'JS used',
+    'CSS used',
+    'Total bytes used',
+  ];
 
-  EVENTS.forEach(event => {
+  const rows = [];
+  for (const event of EVENTS) {
     const usageForEvent = vals.filter(val => val.eventType === event);
 
     if (usageForEvent.length) {
-      for (const stats of usageForEvent) {
-        // totalBytes += stats.totalBytes;
-        // totalUsedBytes += stats.usedBytes;
-
-        const formatter = new UsageFormatter(stats);
-        table.push([
-          UsageFormatter.eventLabel(stats.eventType),
+      for (const entryStats of usageForEvent) {
+        const formatter = new UsageFormatter(entryStats);
+        rows.push([
+          UsageFormatter.eventLabel(entryStats.eventType),
           formatter.barGraph(),
-          formatter.shortSummary(stats.jsUsed), // !== 0 ? `${formatBytesToKB(stats.jsUsed)}KB` : 0,
-          formatter.shortSummary(stats.cssUsed),
-          formatter.summary()
+          formatter.shortSummary(entryStats.jsUsed),
+          formatter.shortSummary(entryStats.cssUsed),
+          formatter.summary(),
         ]);
       }
     } else {
-      table.push([UsageFormatter.eventLabel(event), 'no usage found', '-', '-', '-']);
+      rows.push([UsageFormatter.eventLabel(event), 'no usage found', '-', '-', '-']);
     }
-  });
+  }
 
-  console.log(table.toString());
+  console.log(formatTable(headers, rows));
 }
 
 // Print total usage for each event.
-// console.log('\n');
-EVENTS.forEach(event => {
+for (const event of EVENTS) {
   let totalBytes = 0;
   let totalUsedBytes = 0;
 
-  const metrics = Array.from(stats.values());
-  const statsForEvent = metrics.map(eventStatsForUrl => {
-    const statsForEvent = eventStatsForUrl.filter(stat => stat.eventType === event)[0];
-    // TODO: need to sum max totalBytes. Currently ignores stats if event didn't
-    // have an entry. IOW, all total numerators should be max totalBytes seen for that event.
+  for (const eventStatsForUrl of stats.values()) {
+    const statsForEvent = eventStatsForUrl.find(stat => stat.eventType === event);
     if (statsForEvent) {
       totalBytes += statsForEvent.totalBytes;
       totalUsedBytes += statsForEvent.usedBytes;
     }
-  });
+  }
 
-  const percentUsed = Math.round(totalUsedBytes / totalBytes * 100);
+  const percentUsed = totalBytes ? Math.round((totalUsedBytes / totalBytes) * 100) : 0;
 
-  console.log(`Total used @ ${chalk.magenta(event)}: ${formatBytesToKB(totalUsedBytes)}/${formatBytesToKB(totalBytes)} (${percentUsed}%)`);
-});
-
-})();
+  console.log(
+    `Total used @ ${styleText('magenta', event)}: ` +
+    `${formatBytesToKB(totalUsedBytes)}/${formatBytesToKB(totalBytes)} (${percentUsed}%)`
+  );
+}

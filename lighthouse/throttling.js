@@ -17,66 +17,44 @@
  */
 
 /**
- * Custom network throttling for Lighthouse Testing using Puppeteer.
+ * Custom network throttling for Lighthouse testing using Puppeteer.
  *
- * Chrome gets launched by Puppeteer (normally done by LH) and custom network
- * conditions are established through Puppeteer's APIs. Lighthouse then audits
- * the page with those settings.
- *
- * The flow is:
- * 1. Disable Lighthouse's default throttling settings.
- * 2. Launch Chrome using Puppeteer. Tell Lighthouse to reuse that chrome
- *    instance instead of launching it's own.
- * 3. Hand the url to Lighthouse for testing.
- * Puppeteer observes the page opening, then sets up emulation.
+ * Chrome is launched by Puppeteer, custom network conditions are established
+ * through Puppeteer's API, and Lighthouse audits the page with those settings.
  */
 
-const puppeteer = require('puppeteer');
-const lighthouse = require('lighthouse');
-// const ReportGenerator = require('lighthouse/lighthouse-core/report/v2/report-generator');
-const fs = require('fs');
-const {URL} = require('url');
+import {writeFile} from 'node:fs/promises';
+import lighthouse from 'lighthouse';
+import puppeteer from 'puppeteer';
 
-(async() => {
-
-const url = 'https://www.chromestatus.com/features';
+const url = process.env.URL || 'https://chromestatus.com/roadmap';
 
 // Use Puppeteer to launch headless Chrome.
-const browser = await puppeteer.launch({headless: true});
-const remoteDebugPort =(new URL(browser.wsEndpoint())).port;
+const browser = await puppeteer.launch();
+const page = await browser.newPage();
 
-// Watch for Lighthouse to open url, then customize network conditions.
-// Note: re-establishes throttle settings every time LH reloads the page. Shooooould be ok :)
-browser.on('targetchanged', async target => {
-  const page = await target.page();
-
-  if (page && page.url() === url) {
-    const client = await page.target().createCDPSession();
-    // await client.send('Network.enable'); // Already enabled by pptr.
-    await client.send('Network.emulateNetworkConditions', {
-      offline: false,
-      // values of 0 remove any active throttling. crbug.com/456324#c9
-      latency: 800,
-      downloadThroughput: Math.floor(1.6 * 1024 * 1024 / 8), // 1.6Mbps
-      uploadThroughput: Math.floor(750 * 1024 / 8) // 750Kbps
-    });
-  }
+// Apply custom network throttling via Puppeteer before handing the page to Lighthouse.
+await page.emulateNetworkConditions({
+  offline: false,
+  latency: 800,
+  download: Math.floor((1.6 * 1024 * 1024) / 8), // 1.6 Mbps
+  upload: Math.floor((750 * 1024) / 8), // 750 Kbps
 });
 
-// Lighthouse opens url and tests it.
-// Note: Possible race with Puppeteer observing the tab opening using `targetchanged` above.
-const {report} = await lighthouse(url, {
-  port: remoteDebugPort,
-  output: 'html',
-  logLevel: 'info',
-  disableNetworkThrottling: true,
-  //disableCpuThrottling: true,
-  //disableDeviceEmulation: true,
-});
+// Pass the Puppeteer page directly to Lighthouse with throttlingMethod: 'provided'.
+const {report} = await lighthouse(
+  url,
+  {
+    output: 'html',
+    logLevel: 'info',
+    throttlingMethod: 'provided',
+  },
+  undefined,
+  page
+);
 
-// Save html report.
-fs.writeFileSync('results.html', report);
-console.log('Results written.');
+// Save HTML report.
+await writeFile('results.html', report, 'utf8');
+console.log('Results written to results.html.');
 
 await browser.close();
-})();

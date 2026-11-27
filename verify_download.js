@@ -18,34 +18,30 @@
 
 /**
  * Shows how to click a file download link and verify that the file gets
- * downloaded to the expected download location in the filesystem. Typically,
- * ~/Downloads.
- * Note: this approach only works in headful Chrome.
+ * downloaded to the expected download location in the filesystem.
  *
- * Install:
- *   npm i puppeteer
  * Run:
  *   node verify_download.js
  */
 
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const puppeteer = require('puppeteer');
+import fs from 'node:fs';
+import {mkdir} from 'node:fs/promises';
+import http from 'node:http';
+import path from 'node:path';
+import puppeteer from 'puppeteer';
 
-const DOWNLOAD_PATH = path.resolve(__dirname, 'downloads');
+const DOWNLOAD_PATH = path.resolve(import.meta.dirname, 'downloads');
+const FILENAME = 'sample.csv';
 
 /**
- * From @xprudhomme.
  * Check if file exists, watching containing directory meanwhile.
  * Resolve if the file exists, or if the file is created before the timeout
  * occurs.
  * @param {string} filePath
- * @param {integer} timeout
- * @returns {!Promise<undefined>} Resolves when file has been created. Rejects
- *     if timeout is reached.
+ * @param {number=} timeout
+ * @returns {!Promise<void>}
  */
-function waitForFileExists(filePath, timeout=15000) {
+function waitForFileExists(filePath, timeout = 15000) {
   return new Promise((resolve, reject) => {
     const dir = path.dirname(filePath);
     const basename = path.basename(filePath);
@@ -60,10 +56,10 @@ function waitForFileExists(filePath, timeout=15000) {
 
     const timer = setTimeout(() => {
       watcher.close();
-      reject(new Error(' [checkFileExists] File does not exist, and was not created during the timeout delay.'));
+      reject(new Error('[waitForFileExists] File does not exist, and was not created during the timeout delay.'));
     }, timeout);
 
-    fs.access(filePath, fs.constants.R_OK, err =>  {
+    fs.access(filePath, fs.constants.R_OK, err => {
       if (!err) {
         clearTimeout(timer);
         watcher.close();
@@ -73,59 +69,42 @@ function waitForFileExists(filePath, timeout=15000) {
   });
 }
 
-(async() => {
+// Start a local test server that serves a downloadable CSV file.
+const server = http.createServer((req, res) => {
+  if (req.url === `/${FILENAME}`) {
+    res.writeHead(200, {
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="${FILENAME}"`,
+    });
+    res.end('name,value\npuppeteer,1\n');
+    return;
+  }
+  res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+  res.end(`<a id="download" href="/${FILENAME}" download="${FILENAME}">Download CSV</a>`);
+});
+
+await new Promise(resolve => server.listen(0, resolve));
+const {port} = server.address();
+
+await mkdir(DOWNLOAD_PATH, {recursive: true});
 
 const browser = await puppeteer.launch();
-
 const page = await browser.newPage();
 
 // Change from the default ~/Downloads folder to our own.
-const client = await page.target().createCDPSession();
-await client.send('Page.setDownloadBehavior', {
+const client = await page.createCDPSession();
+await client.send('Browser.setDownloadBehavior', {
   behavior: 'allow',
   downloadPath: DOWNLOAD_PATH,
 });
 
-const url = 'https://www.nseindia.com/products/content/equities/equities/homepage_eq.htm';
-await page.goto(url);
-// Wait for main content area to have list of links.
-await page.waitForSelector('.main_content', {visible: true, timeout: 5000});
+await page.goto(`http://localhost:${port}/`);
+await page.click('#download');
 
-const downloadUrl = await page.evaluate(() => {
-  const link = document.evaluate(`//a[text()="Short Selling (csv)"]`, document,
-      null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-  if (link) {
-    // Prevent link from opening up in a new tab. Puppeteer won't respect
-    // the Page.setDownloadBehavior on the new tab and the file ends up in the
-    // default download folder.
-    link.target = '';
-    link.click();
-    return link.href;
-  }
-  return null;
-});
-
-if (!downloadUrl) {
-  console.warn('Did not find link to download!');
-  await browser.close();
-  return;
-}
-
-// Wait for file response to complete.
-await new Promise(resolve => {
-  page.on('response', async resp => {
-    if (resp.url() === downloadUrl) {
-      resolve();
-    }
-  });
-});
-
-console.log('Downloaded.');
-
-// Verify it's on the file system.
-await waitForFileExists(`${DOWNLOAD_PATH}/ShortSelling.csv`);
-console.log('Exists!');
+// Verify the file lands on the file system.
+const downloadedFile = path.join(DOWNLOAD_PATH, FILENAME);
+await waitForFileExists(downloadedFile);
+console.log(`Downloaded and verified: ${downloadedFile}`);
 
 await browser.close();
-
-})();
+server.close();

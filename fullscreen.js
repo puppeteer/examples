@@ -16,21 +16,19 @@
  * @author ebidel@ (Eric Bidelman)
  */
 
- /**
-  * Launch a URL in full screen.
-  */
+/**
+ * Launch a URL in full screen.
+ */
 
-const puppeteer = require('puppeteer');
+import {setTimeout} from 'node:timers/promises';
+import puppeteer from 'puppeteer';
 
-const url = process.env.URL || 'https://news.ycombinator.com/';
-
-(async() => {
+const url = process.env.URL || 'https://developer.chrome.com/';
 
 const browser = await puppeteer.launch({
   headless: false,
   // See flags at https://peter.sh/experiments/chromium-command-line-switches/.
   args: [
-    '--disable-infobars', // Removes the butter bar.
     '--start-maximized',
     // '--start-fullscreen',
     // '--window-size=1920,1080',
@@ -41,8 +39,7 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 await page.setViewport({width: 1920, height: 1080});
 await page.goto(url);
-await page.evaluate('document.documentElement.webkitRequestFullscreen()');
-await page.waitFor(5000);
+await page.evaluate(() => document.documentElement.requestFullscreen());
+await setTimeout(5000);
 
 await browser.close();
-})();

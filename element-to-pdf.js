@@ -17,57 +17,52 @@
  */
 
 /**
- * Takes a screenshot of the latest tweet in a user's timeline and creates a
- * PDF of it. Shows how to use Puppeteer to:
+ * Takes a screenshot of a DOM element on a page and creates a PDF of it.
+ * Shows how to use Puppeteer to:
  *
  *   1. screenshot a DOM element
  *   2. craft an HTML page on-the-fly
- *   3. produce an image of the element and PDF of the page with the image embedded
+ *   3. produce an image of the element and a PDF of the page with the image embedded
  *
  * Usage:
  *   node element-to-pdf.js
- *   USERNAME=ChromiumDev node element-to-pdf.js
+ *   URL=https://developer.chrome.com/ SELECTOR=.devsite-landing-row-item node element-to-pdf.js
  *
  *   --searchable makes "find in page" work:
  *   node element-to-pdf.js --searchable
  *
  * Output:
- *   tweet.png and tweet.pdf
+ *   element.png and element.pdf
  */
-const puppeteer = require('puppeteer');
 
-const username = process.env.USERNAME || 'ebidel';
+import puppeteer from 'puppeteer';
+
+const url = process.env.URL || 'https://developer.chrome.com/';
+const selector = process.env.SELECTOR || '.devsite-landing-row-item';
 const searchable = process.argv.includes('--searchable');
-
-(async() => {
 
 const browser = await puppeteer.launch();
 
 const page = await browser.newPage();
 await page.setViewport({width: 1200, height: 800, deviceScaleFactor: 2});
-await page.goto(`https://twitter.com/${username}`);
+await page.goto(url, {waitUntil: 'networkidle2'});
 
-// Can't use elementHandle.click() because it clicks the center of the element
-// with the mouse. On tweets like https://twitter.com/ebidel/status/915996563234631680
-// there is an embedded card link to another tweet that it clicks.
-await page.$eval(`.tweet[data-screen-name="${username}"]`, tweet => tweet.click());
-await page.waitForSelector('.tweet.permalink-tweet', {visible: true});
-
-const overlay = await page.$('.tweet.permalink-tweet');
-const screenshot = await overlay.screenshot({path: 'tweet.png'});
+const element = await page.waitForSelector(selector, {visible: true});
+const screenshot = await element.screenshot({path: 'element.png'});
 
 if (searchable) {
-  await page.evaluate(tweet => {
-    const width = getComputedStyle(tweet).width;
-    tweet = tweet.cloneNode(true);
-    tweet.style.width = width;
+  await page.evaluate(el => {
+    const {width} = getComputedStyle(el);
+    const clone = el.cloneNode(true);
+    clone.style.width = width;
     document.body.innerHTML = `
-      <div style="display:flex;justify-content:center;align-items:center;height:100vh;">;
-        ${tweet.outerHTML}
+      <div style="display:flex;justify-content:center;align-items:center;height:100vh;">
+        ${clone.outerHTML}
       </div>
     `;
-  }, overlay);
+  }, element);
 } else {
+  const base64 = Buffer.from(screenshot).toString('base64');
   await page.setContent(`
     <!DOCTYPE html>
     <html>
@@ -82,21 +77,19 @@ if (searchable) {
             background: #fafafa;
           }
           img {
-            max-width: 60%;
+            max-width: 80%;
             box-shadow: 3px 3px 6px #eee;
             border-radius: 6px;
           }
         </style>
       </head>
       <body>
-        <img src="data:img/png;base64,${screenshot.toString('base64')}">
+        <img src="data:image/png;base64,${base64}">
       </body>
     </html>
   `);
 }
 
-await page.pdf({path: 'tweet.pdf', printBackground: true});
+await page.pdf({path: 'element.pdf', printBackground: true});
 
 await browser.close();
-
-})();

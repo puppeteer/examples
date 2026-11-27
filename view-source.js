@@ -18,13 +18,12 @@
 
 // Curl a page and dump its markup.
 
-const puppeteer = require('puppeteer');
+import puppeteer from 'puppeteer';
 
-const URL = process.env.URL || 'https://www.chromestatus.com/features';
+const URL = process.env.URL || 'https://chromestatus.com/roadmap';
 
-puppeteer.launch().then(async browser => {
-  const page = await browser.newPage();
-  const response = await page.goto(URL);
-  console.log(await response.text());
-  await browser.close();
-});
+const browser = await puppeteer.launch();
+const page = await browser.newPage();
+const response = await page.goto(URL);
+console.log(await response.text());
+await browser.close();
